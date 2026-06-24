@@ -4,12 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no, maximum-scale=1.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="WedFund">
 <meta name="theme-color" content="#0F6E56">
 <link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
-<link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
+<link rel="apple-touch-icon" sizes="192x192" href="icon-192.png">
 <title>Wedding Fund Tracker</title>
 <style>
 /* ── VARIABLES ─────────────────────────────────────────────────────────── */
@@ -979,42 +980,42 @@ const ensureUserDoc = async (user) => {
       createdAt:   serverTimestamp(),
     });
     for (const p of DEFAULT_PLATFORMS) {
-      await fsSet(fsDoc(platCol(user.uid), p.id), p);
+      await fsSet(_fsDoc(platCol(user.uid), p.id), p);
     }
   }
 };
 
 // ── WRITE HELPERS ─────────────────────────────────────────────────────────
 const savePlatform = async (p) => {
-  await safeWrite(() => fsSet(fsDoc(platCol(state.uid), p.id), p));
+  await safeWrite(() => fsSet(_fsDoc(platCol(state.uid), p.id), p));
 };
 
 const deletePlatform = async (id) => {
-  await fsDel(fsDoc(platCol(state.uid), id));
+  await fsDel(_fsDoc(platCol(state.uid), id));
 };
 
 const saveEntry = async (entry) => {
-  await safeWrite(() => fsSet(fsDoc(entrCol(state.uid), entry.id), entry));
+  await safeWrite(() => fsSet(_fsDoc(entrCol(state.uid), entry.id), entry));
 };
 
 const deleteEntry = async (id) => {
-  await fsDel(fsDoc(entrCol(state.uid), id));
+  await fsDel(_fsDoc(entrCol(state.uid), id));
 };
 
 const savePromo = async (p) => {
-  await safeWrite(() => fsSet(fsDoc(promoCol(state.uid), p.id), p));
+  await safeWrite(() => fsSet(_fsDoc(promoCol(state.uid), p.id), p));
 };
 
 const deletePromo = async (id) => {
-  await fsDel(fsDoc(promoCol(state.uid), id));
+  await fsDel(_fsDoc(promoCol(state.uid), id));
 };
 
 const saveCustomCat = async (cat) => {
-  await fsSet(fsDoc(catCol(state.uid), cat.id), cat);
+  await fsSet(_fsDoc(catCol(state.uid), cat.id), cat);
 };
 
 const deleteCustomCat = async (id) => {
-  await fsDel(fsDoc(catCol(state.uid), id));
+  await fsDel(_fsDoc(catCol(state.uid), id));
 };
 
 const saveUserSettings = async (settings) => {
@@ -1023,22 +1024,22 @@ const saveUserSettings = async (settings) => {
 
 const saveBudgetItem = async (item) => {
   const cid = state.coupleId || ('solo_' + state.uid);
-  await safeWrite(() => fsSet(fsDoc(budgetCol(cid), item.id), item));
+  await safeWrite(() => fsSet(_fsDoc(budgetCol(cid), item.id), item));
 };
 
 const deleteBudgetItem = async (id) => {
   const cid = state.coupleId || ('solo_' + state.uid);
-  await fsDel(fsDoc(budgetCol(cid), id));
+  await fsDel(_fsDoc(budgetCol(cid), id));
 };
 
 const saveExpense = async (exp) => {
   const cid = state.coupleId || ('solo_' + state.uid);
-  await safeWrite(() => fsSet(fsDoc(expCol(cid), exp.id), exp));
+  await safeWrite(() => fsSet(_fsDoc(expCol(cid), exp.id), exp));
 };
 
 const deleteExpense = async (id) => {
   const cid = state.coupleId || ('solo_' + state.uid);
-  await fsDel(fsDoc(expCol(cid), id));
+  await fsDel(_fsDoc(expCol(cid), id));
 };
 
 // ── PARTNER ───────────────────────────────────────────────────────────────
@@ -1072,8 +1073,8 @@ const connectPartner = async (partnerUID) => {
     );
     const biSnap = await getDocs(budgetCol(soloCid));
     const exSnap = await getDocs(expCol(soloCid));
-    for (const d of biSnap.docs) await fsSet(fsDoc(budgetCol(cId), d.id), d.data());
-    for (const d of exSnap.docs) await fsSet(fsDoc(expCol(cId),    d.id), d.data());
+    for (const d of biSnap.docs) await fsSet(_fsDoc(budgetCol(cId), d.id), d.data());
+    for (const d of exSnap.docs) await fsSet(_fsDoc(expCol(cId),    d.id), d.data());
     console.log(`Migrated ${biSnap.size} budget items + ${exSnap.size} expenses`);
   } catch (e) {
     console.warn('Migration skipped:', e.message);
@@ -1097,11 +1098,11 @@ const migrateSoloDataToCouple = async () => {
     const exSnap = await getDocs(expCol(soloCid));
     let count = 0;
     for (const d of biSnap.docs) {
-      await fsSet(fsDoc(budgetCol(state.coupleId), d.id), d.data());
+      await fsSet(_fsDoc(budgetCol(state.coupleId), d.id), d.data());
       count++;
     }
     for (const d of exSnap.docs) {
-      await fsSet(fsDoc(expCol(state.coupleId), d.id), d.data());
+      await fsSet(_fsDoc(expCol(state.coupleId), d.id), d.data());
       count++;
     }
     return count;
