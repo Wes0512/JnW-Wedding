@@ -691,6 +691,7 @@ import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChang
 import { getFirestore, doc, collection, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, serverTimestamp, getDocs } from 'https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js';
 
 const _fsDoc = (col, id) => doc(col, id);
+
 // ── firebase.js ──────────────────────────────────────────────────────────
 // Firebase initialisation, Auth, and Firestore instance exports
 
@@ -3403,6 +3404,24 @@ const onDataUpdate = () => {
   renderHome();
   if (_activeScreen !== 'home') onRefresh();
 };
+
+
+// ── FUNCTION ALIASES (previously imported with 'as') ──────────────────────
+const fsSavePlatform      = savePlatform;
+const fsDeletePlatform    = deletePlatform;
+const fsSaveEntry         = saveEntry;
+const fsDeleteEntry       = deleteEntry;
+const fsSavePromo         = savePromo;
+const fsDeletePromo       = deletePromo;
+const fsSaveBudgetItem    = saveBudgetItem;
+const fsDeleteBudgetItem  = deleteBudgetItem;
+const fsSaveExpense       = saveExpense;
+const fsDeleteExpense     = deleteExpense;
+const fsSaveCustomCat     = saveCustomCat;
+const fsDeleteCustomCat   = deleteCustomCat;
+const fsConnectPartner    = connectPartner;
+const fsDisconnectPartner = disconnectPartner;
+const fsMigrate           = migrateSoloDataToCouple;
 
 // ── AUTH STATE ────────────────────────────────────────────────────────────
 onAuthChange(async (user) => {
