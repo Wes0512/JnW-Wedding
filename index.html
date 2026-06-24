@@ -685,30 +685,17 @@ body {
 <div class="toast" id="toast"></div>
 
 <!-- JS modules loaded here by main.js -->
-<script type="module">import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js';
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js';
 import { getFirestore, doc, collection, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, serverTimestamp, getDocs } from 'https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js';
 
-
-// ═══ firebase.js ═══
-
+const _fsDoc = (col, id) => doc(col, id);
 // ── firebase.js ──────────────────────────────────────────────────────────
 // Firebase initialisation, Auth, and Firestore instance exports
 
-  getAuth,
-  GoogleAuthProvider,
-  signInWithPopup,
-  signOut,
-  onAuthStateChanged
-  getFirestore,
-  doc,
-  collection,
-  getDoc,
-  setDoc,
-  updateDoc,
-  deleteDoc,
-  onSnapshot,
-  serverTimestamp
+
+
 
 // ── CONFIG ────────────────────────────────────────────────────────────────
 const firebaseConfig = {
@@ -727,7 +714,6 @@ const db          = getFirestore(firebaseApp);
 
 // ── FIRESTORE PATH HELPERS ────────────────────────────────────────────────
 // Call these after uid is set
-const _fsDoc = (col, id) => doc(col, id);
 const userRef    = uid => doc(db, 'users', uid);
 const platCol    = uid => collection(db, 'users', uid, 'platforms');
 const entrCol    = uid => collection(db, 'users', uid, 'entries');
@@ -763,7 +749,6 @@ const fsGet = async ref => {
 const fsListen = (ref, cb) => {
   return onSnapshot(ref, cb);
 };
-
 
 
 // ── AUTH FUNCTIONS ────────────────────────────────────────────────────────
@@ -848,18 +833,10 @@ const PLAT_COLORS = [
 ];
 
 
-// ═══ data.js ═══
-
 // ── data.js ───────────────────────────────────────────────────────────────
 // App state, Firestore listeners, data calculation helpers
 
-  userRef, platCol, entrCol, promoCol, catCol,
-  budgetCol, expCol, partEntrCol, partPlatCol,
-  coupleRef,
-  fsSet, fsDel, fsGet, fsListen, serverTimestamp,
-  DEFAULT_PLATFORMS, DEFAULT_SETTINGS,
 
-  doc as fsDoc,
 
 // ── APP STATE ─────────────────────────────────────────────────────────────
 const state = {
@@ -1001,42 +978,42 @@ const ensureUserDoc = async (user) => {
       createdAt:   serverTimestamp(),
     });
     for (const p of DEFAULT_PLATFORMS) {
-      await fsSet(_fsDoc(platCol(user.uid), p.id), p);
+      await fsSet(fsDoc(platCol(user.uid), p.id), p);
     }
   }
 };
 
 // ── WRITE HELPERS ─────────────────────────────────────────────────────────
 const savePlatform = async (p) => {
-  await safeWrite(() => fsSet(_fsDoc(platCol(state.uid), p.id), p));
+  await safeWrite(() => fsSet(fsDoc(platCol(state.uid), p.id), p));
 };
 
 const deletePlatform = async (id) => {
-  await fsDel(_fsDoc(platCol(state.uid), id));
+  await fsDel(fsDoc(platCol(state.uid), id));
 };
 
 const saveEntry = async (entry) => {
-  await safeWrite(() => fsSet(_fsDoc(entrCol(state.uid), entry.id), entry));
+  await safeWrite(() => fsSet(fsDoc(entrCol(state.uid), entry.id), entry));
 };
 
 const deleteEntry = async (id) => {
-  await fsDel(_fsDoc(entrCol(state.uid), id));
+  await fsDel(fsDoc(entrCol(state.uid), id));
 };
 
 const savePromo = async (p) => {
-  await safeWrite(() => fsSet(_fsDoc(promoCol(state.uid), p.id), p));
+  await safeWrite(() => fsSet(fsDoc(promoCol(state.uid), p.id), p));
 };
 
 const deletePromo = async (id) => {
-  await fsDel(_fsDoc(promoCol(state.uid), id));
+  await fsDel(fsDoc(promoCol(state.uid), id));
 };
 
 const saveCustomCat = async (cat) => {
-  await fsSet(_fsDoc(catCol(state.uid), cat.id), cat);
+  await fsSet(fsDoc(catCol(state.uid), cat.id), cat);
 };
 
 const deleteCustomCat = async (id) => {
-  await fsDel(_fsDoc(catCol(state.uid), id));
+  await fsDel(fsDoc(catCol(state.uid), id));
 };
 
 const saveUserSettings = async (settings) => {
@@ -1045,22 +1022,22 @@ const saveUserSettings = async (settings) => {
 
 const saveBudgetItem = async (item) => {
   const cid = state.coupleId || ('solo_' + state.uid);
-  await safeWrite(() => fsSet(_fsDoc(budgetCol(cid), item.id), item));
+  await safeWrite(() => fsSet(fsDoc(budgetCol(cid), item.id), item));
 };
 
 const deleteBudgetItem = async (id) => {
   const cid = state.coupleId || ('solo_' + state.uid);
-  await fsDel(_fsDoc(budgetCol(cid), id));
+  await fsDel(fsDoc(budgetCol(cid), id));
 };
 
 const saveExpense = async (exp) => {
   const cid = state.coupleId || ('solo_' + state.uid);
-  await safeWrite(() => fsSet(_fsDoc(expCol(cid), exp.id), exp));
+  await safeWrite(() => fsSet(fsDoc(expCol(cid), exp.id), exp));
 };
 
 const deleteExpense = async (id) => {
   const cid = state.coupleId || ('solo_' + state.uid);
-  await fsDel(_fsDoc(expCol(cid), id));
+  await fsDel(fsDoc(expCol(cid), id));
 };
 
 // ── PARTNER ───────────────────────────────────────────────────────────────
@@ -1089,11 +1066,13 @@ const connectPartner = async (partnerUID) => {
 
   // Step 4: Migrate solo budget data → couple path
   try {
-    // getDocs already imported at top
+    const { getDocs } = await import(
+      'https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js'
+    );
     const biSnap = await getDocs(budgetCol(soloCid));
     const exSnap = await getDocs(expCol(soloCid));
-    for (const d of biSnap.docs) await fsSet(_fsDoc(budgetCol(cId), d.id), d.data());
-    for (const d of exSnap.docs) await fsSet(_fsDoc(expCol(cId),    d.id), d.data());
+    for (const d of biSnap.docs) await fsSet(fsDoc(budgetCol(cId), d.id), d.data());
+    for (const d of exSnap.docs) await fsSet(fsDoc(expCol(cId),    d.id), d.data());
     console.log(`Migrated ${biSnap.size} budget items + ${exSnap.size} expenses`);
   } catch (e) {
     console.warn('Migration skipped:', e.message);
@@ -1110,16 +1089,18 @@ const migrateSoloDataToCouple = async () => {
   }
   const soloCid = 'solo_' + state.uid;
   try {
-    // getDocs already imported at top
+    const { getDocs } = await import(
+      'https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js'
+    );
     const biSnap = await getDocs(budgetCol(soloCid));
     const exSnap = await getDocs(expCol(soloCid));
     let count = 0;
     for (const d of biSnap.docs) {
-      await fsSet(_fsDoc(budgetCol(state.coupleId), d.id), d.data());
+      await fsSet(fsDoc(budgetCol(state.coupleId), d.id), d.data());
       count++;
     }
     for (const d of exSnap.docs) {
-      await fsSet(_fsDoc(expCol(state.coupleId), d.id), d.data());
+      await fsSet(fsDoc(expCol(state.coupleId), d.id), d.data());
       count++;
     }
     return count;
@@ -1250,16 +1231,9 @@ const budgetTotals = () => {
 };
 
 
-// ═══ ui-home.js ═══
-
 // ── ui-home.js ────────────────────────────────────────────────────────────
 // Renders everything on the home screen
 
-  state,
-  fmtRM, shortInitials,
-  getLatestBal, totalBal, blendedEAR, getPlatEAR,
-  totalSpentBy, partnerTotalBal,
-  getTodayEntries,
 
 // ── MAIN RENDER ───────────────────────────────────────────────────────────
 const renderHome = () => {
@@ -1523,19 +1497,9 @@ const _setWidth = (id, pct) => {
 };
 
 
-// ═══ ui-log.js ═══
-
 // ── ui-log.js ─────────────────────────────────────────────────────────────
 // Log screen: platform grid, balance input, auto-interest, save entry
 
-  state,
-  fmtRM, shortInitials,
-  getLatestBal, getPlatEAR,
-  calcAutoInt, getTodayEntries,
-  todayStr,
-  saveEntry as fsSaveEntry,
-  deleteEntry as fsDeleteEntry,
-  showToast,
 
 // ── MODULE STATE ──────────────────────────────────────────────────────────
 let _selIdx   = 0;   // currently selected platform index
@@ -1772,21 +1736,9 @@ const bindLogListeners = () => {
 };
 
 
-// ═══ ui-expenses.js ═══
-
 // ── ui-expenses.js ────────────────────────────────────────────────────────
 // Wedding budget planner: overview, budget items, payments, custom categories
 
-  state,
-  fmtRM, getCat, getAllCats,
-  totalSpentBy, budgetTotals,
-  todayStr, showToast,
-  saveBudgetItem  as fsSaveBudgetItem,
-  deleteBudgetItem as fsDeleteBudgetItem,
-  saveExpense      as fsSaveExpense,
-  deleteExpense    as fsDeleteExpense,
-  saveCustomCat    as fsSaveCustomCat,
-  deleteCustomCat  as fsDeleteCustomCat,
 
 
 // ── MODULE STATE ──────────────────────────────────────────────────────────
@@ -1828,15 +1780,15 @@ const _renderOverview = () => {
   const mPct    = totalBudget > 0 ? Math.min(100, myPaid   / totalBudget * 100) : 0;
   const hPct    = Math.min(Math.max(0, usedPct - mPct), 100 - mPct);
 
-  _setE('bud-total',         fmtRM(totalBudget));
-  _setE('bud-used-pct',      usedPct.toFixed(1) + '%');
-  _setE('bud-me-paid',       fmtRM(myPaid));
-  _setE('bud-her-paid',      fmtRM(herPaid));
-  _setE('bud-remaining',     fmtRM(totalBalance));
-  _setE('bud-total-paid',    fmtRM(totalPaid));
-  _setE('bud-total-balance', fmtRM(totalBalance));
-  _setWidthE('bud-bar-me',  mPct);
-  _setWidthE('bud-bar-her', hPct);
+  _setEx('bud-total',         fmtRM(totalBudget));
+  _setEx('bud-used-pct',      usedPct.toFixed(1) + '%');
+  _setEx('bud-me-paid',       fmtRM(myPaid));
+  _setEx('bud-her-paid',      fmtRM(herPaid));
+  _setEx('bud-remaining',     fmtRM(totalBalance));
+  _setEx('bud-total-paid',    fmtRM(totalPaid));
+  _setEx('bud-total-balance', fmtRM(totalBalance));
+  _setWidthEx('bud-bar-me',  mPct);
+  _setWidthEx('bud-bar-her', hPct);
 
   const surpEl = document.getElementById('bud-surplus');
   if (surpEl) {
@@ -2267,28 +2219,20 @@ const bindExpensesListeners = () => {
 };
 
 // ── DOM HELPERS ───────────────────────────────────────────────────────────
-const _setE = (id, text) => {
+const _setEx = (id, text) => {
   const el = document.getElementById(id);
   if (el) el.textContent = text;
 };
 
-const _setWidthE = (id, pct) => {
+const _setWidthEx = (id, pct) => {
   const el = document.getElementById(id);
   if (el) el.style.width = Math.max(0, Math.min(100, pct)) + '%';
 };
 
 
-// ═══ ui-analysis.js ═══
-
 // ── ui-analysis.js ────────────────────────────────────────────────────────
 // Analysis screen: EAR trends, trailing interest, decisions, sim, monthly report
 
-  state,
-  fmtRM,
-  totalBal, blendedEAR, getPlatEAR,
-  totalSpentBy, partnerTotalBal,
-  trailingEAR, trailingInterest, monthlyInterest,
-  showToast, saveUserSettings,
 
 // ── MAIN RENDER ───────────────────────────────────────────────────────────
 const renderAnalysis = () => {
@@ -2584,22 +2528,9 @@ const bindAnalysisListeners = () => {
 };
 
 
-// ═══ ui-settings.js ═══
-
 // ── ui-settings.js ────────────────────────────────────────────────────────
 // Settings screen: account, partner, platforms, goals, promos, notifications
 
-  state,
-  fmtRM, shortInitials, getPlatEAR,
-  getLatestBal, todayStr, showToast,
-  savePlatform    as fsSavePlatform,
-  deletePlatform  as fsDeletePlatform,
-  savePromo       as fsSavePromo,
-  deletePromo     as fsDeletePromo,
-  saveUserSettings,
-  connectPartner  as fsConnectPartner,
-  disconnectPartner as fsDisconnectPartner,
-  migrateSoloDataToCouple,
 
 
 // ── MODULE STATE (platform modal) ─────────────────────────────────────────
@@ -3117,13 +3048,9 @@ const _setVal = (id, val) => {
 };
 
 
-// ═══ ui-inflow.js ═══
-
 // ── ui-inflow.js ──────────────────────────────────────────────────────────
 // Inflow allocation: salary mode, bonus mode, platform advice, promo tip
 
-  state,
-  fmtRM, getPlatEAR,
 
 // ── MODULE STATE ──────────────────────────────────────────────────────────
 let _mode = 'salary'; // 'salary' | 'bonus'
@@ -3417,19 +3344,17 @@ const bindInflowListeners = () => {
 };
 
 
-// ═══ main.js ═══
-
 // ── main.js ───────────────────────────────────────────────────────────────
 // App entry point: Auth, navigation, listeners, global refresh
 
-  signInWithGoogle, signOutUser, onAuthChange,
-  showLoading, showAuth, showApp,
-  DEFAULT_PLATFORMS, DEFAULT_CATS,
 
-  state,
-  stopListeners, startMyListeners,
-  ensureUserDoc,
-  showToast,
+
+
+
+
+
+
+
 // ── EXPOSE DEFAULT_CATS globally for getAllCats() in data.js ───────────────
 window._DEFAULT_CATS = DEFAULT_CATS;
 
