@@ -1828,15 +1828,15 @@ const _renderOverview = () => {
   const mPct    = totalBudget > 0 ? Math.min(100, myPaid   / totalBudget * 100) : 0;
   const hPct    = Math.min(Math.max(0, usedPct - mPct), 100 - mPct);
 
-  _set('bud-total',         fmtRM(totalBudget));
-  _set('bud-used-pct',      usedPct.toFixed(1) + '%');
-  _set('bud-me-paid',       fmtRM(myPaid));
-  _set('bud-her-paid',      fmtRM(herPaid));
-  _set('bud-remaining',     fmtRM(totalBalance));
-  _set('bud-total-paid',    fmtRM(totalPaid));
-  _set('bud-total-balance', fmtRM(totalBalance));
-  _setWidth('bud-bar-me',  mPct);
-  _setWidth('bud-bar-her', hPct);
+  _setE('bud-total',         fmtRM(totalBudget));
+  _setE('bud-used-pct',      usedPct.toFixed(1) + '%');
+  _setE('bud-me-paid',       fmtRM(myPaid));
+  _setE('bud-her-paid',      fmtRM(herPaid));
+  _setE('bud-remaining',     fmtRM(totalBalance));
+  _setE('bud-total-paid',    fmtRM(totalPaid));
+  _setE('bud-total-balance', fmtRM(totalBalance));
+  _setWidthE('bud-bar-me',  mPct);
+  _setWidthE('bud-bar-her', hPct);
 
   const surpEl = document.getElementById('bud-surplus');
   if (surpEl) {
@@ -2267,12 +2267,12 @@ const bindExpensesListeners = () => {
 };
 
 // ── DOM HELPERS ───────────────────────────────────────────────────────────
-const _set = (id, text) => {
+const _setE = (id, text) => {
   const el = document.getElementById(id);
   if (el) el.textContent = text;
 };
 
-const _setWidth = (id, pct) => {
+const _setWidthE = (id, pct) => {
   const el = document.getElementById(id);
   if (el) el.style.width = Math.max(0, Math.min(100, pct)) + '%';
 };
