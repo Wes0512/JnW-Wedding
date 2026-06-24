@@ -727,6 +727,7 @@ const db          = getFirestore(firebaseApp);
 
 // ── FIRESTORE PATH HELPERS ────────────────────────────────────────────────
 // Call these after uid is set
+const _fsDoc = (col, id) => doc(col, id);
 const userRef    = uid => doc(db, 'users', uid);
 const platCol    = uid => collection(db, 'users', uid, 'platforms');
 const entrCol    = uid => collection(db, 'users', uid, 'entries');
