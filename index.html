@@ -1,0 +1,3593 @@
+<!DOCTYPE html>
+<html lang="zh-MY">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="WedFund">
+<meta name="theme-color" content="#0F6E56">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
+<link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png">
+<title>Wedding Fund Tracker</title>
+<style>
+/* ── VARIABLES ─────────────────────────────────────────────────────────── */
+:root {
+  --teal:#0F6E56; --teal-mid:#1D9E75; --teal-light:#E1F5EE;
+  --amber:#BA7517; --amber-light:#FAEEDA;
+  --red:#A32D2D; --red-light:#FCEBEB;
+  --purple:#534AB7; --purple-light:#EEEDFE;
+  --blue:#185FA5; --blue-light:#E6F1FB;
+  --coral:#993C1D; --coral-light:#FAECE7;
+  --bg:#F7F6F3; --card:#FFFFFF; --text:#1A1A18; --muted:#6B6A65; --border:#E2E0D8;
+  --radius:16px; --radius-sm:10px; --nav-h:58px;
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bot:env(safe-area-inset-bottom,0px);
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#131311; --card:#1C1C19; --text:#E8E6DE; --muted:#8A8880; --border:#2C2C28;
+  --teal-light:#0A3028; --amber-light:#2A1E08; --red-light:#2A1010;
+  --purple-light:#1A1840; --blue-light:#0C1E35; --coral-light:#2A1008;
+}}
+
+/* ── RESET & BASE ──────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  background: var(--bg); color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif;
+  font-size: 16px; max-width: 430px; margin: 0 auto;
+  display: flex; flex-direction: column; position: relative;
+  height: 100%; height: 100dvh;
+}
+
+/* ── LAYOUT ────────────────────────────────────────────────────────────── */
+#main-app {
+  flex: 1; display: flex; flex-direction: column;
+  min-height: 0; overflow: hidden;
+}
+#app {
+  flex: 1; overflow-y: auto; overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding-top: var(--safe-top); scroll-behavior: smooth;
+  padding-bottom: calc(var(--nav-h) + var(--safe-bot) + 16px);
+  min-height: 0;
+}
+.bottom-nav {
+  background: var(--card); border-top: 1px solid var(--border);
+  display: flex; position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 100%; max-width: 430px;
+  padding-bottom: var(--safe-bot); z-index: 50;
+  height: calc(var(--nav-h) + var(--safe-bot));
+}
+.nav-btn {
+  flex: 1; padding: 10px 0 5px;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  font-size: 9px; color: var(--muted);
+  background: none; border: none; cursor: pointer;
+  font-family: inherit; transition: color .15s;
+}
+.nav-btn.active { color: var(--teal); }
+.nav-icon { font-size: 18px; line-height: 1; }
+.screen { display: none; padding: 16px; }
+.screen.active { display: block; }
+
+/* ── LOADING ───────────────────────────────────────────────────────────── */
+#loading-screen {
+  position: fixed; inset: 0; background: var(--bg);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  z-index: 1000; gap: 16px;
+}
+.spinner {
+  width: 36px; height: 36px;
+  border: 3px solid var(--border); border-top-color: var(--teal);
+  border-radius: 50%; animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── AUTH ──────────────────────────────────────────────────────────────── */
+#auth-screen {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 100vh; padding: 32px 24px; text-align: center;
+}
+.auth-btn {
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+  width: 100%; max-width: 320px; padding: 16px 24px;
+  border-radius: var(--radius-sm); border: 1.5px solid var(--border);
+  background: var(--card); color: var(--text);
+  font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit;
+}
+.auth-btn svg { width: 22px; height: 22px; flex-shrink: 0; }
+
+/* ── CARDS ─────────────────────────────────────────────────────────────── */
+.card { background: var(--card); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; border: 1px solid var(--border); }
+.card-label { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+.page-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 18px; padding-top: 4px; }
+.page-title { font-size: 24px; font-weight: 800; letter-spacing: -.6px; }
+.page-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.sec-label { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 16px 0 8px; }
+
+/* ── HERO ──────────────────────────────────────────────────────────────── */
+.hero { background: linear-gradient(140deg,#0F6E56 0%,#085041 100%); border-radius: var(--radius); padding: 20px; margin-bottom: 12px; color: #fff; border: none; }
+.hero-val { font-size: 36px; font-weight: 900; letter-spacing: -1.5px; line-height: 1; }
+.hero-label { font-size: 11px; opacity: .7; margin-top: 3px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+.hero-row { display: flex; margin-top: 16px; border-top: 1px solid rgba(255,255,255,.15); padding-top: 14px; }
+.hero-stat { flex: 1; padding: 0 6px; border-right: 1px solid rgba(255,255,255,.15); }
+.hero-stat:first-child { padding-left: 0; }
+.hero-stat:last-child { border-right: none; }
+.hero-stat .v { font-size: 13px; font-weight: 800; }
+.hero-stat .l { font-size: 9px; opacity: .65; margin-top: 2px; }
+
+/* ── JOINT CARD ────────────────────────────────────────────────────────── */
+.joint-card { background: linear-gradient(140deg,var(--purple) 0%,#3C3489 100%); border-radius: var(--radius); padding: 18px; margin-bottom: 12px; color: #fff; border: none; }
+.joint-total { font-size: 28px; font-weight: 900; letter-spacing: -1px; }
+.joint-row { display: flex; gap: 10px; margin-top: 12px; border-top: 1px solid rgba(255,255,255,.15); padding-top: 12px; }
+.joint-part { flex: 1; background: rgba(255,255,255,.1); border-radius: 10px; padding: 9px 11px; }
+.joint-part .jv { font-size: 15px; font-weight: 800; }
+.joint-part .jl { font-size: 10px; opacity: .7; margin-top: 2px; }
+
+/* ── PROGRESS BARS ─────────────────────────────────────────────────────── */
+.prog-wrap { height: 8px; background: rgba(0,0,0,.08); border-radius: 20px; overflow: hidden; margin: 6px 0; }
+@media(prefers-color-scheme:dark){ .prog-wrap { background: rgba(255,255,255,.1); } }
+.prog-fill { height: 100%; border-radius: 20px; transition: width .6s; }
+.prog-stacked { height: 10px; background: rgba(0,0,0,.08); border-radius: 20px; overflow: hidden; margin: 8px 0; display: flex; }
+@media(prefers-color-scheme:dark){ .prog-stacked { background: rgba(255,255,255,.1); } }
+.prog-savings { background: linear-gradient(90deg,#C9A84C,#FFD700); transition: width .6s; height: 100%; }
+.prog-spent { background: linear-gradient(90deg,#D85A30,#F0997B); transition: width .6s; height: 100%; }
+.legend { display: flex; gap: 14px; font-size: 11px; color: var(--muted); margin-top: 4px; flex-wrap: wrap; }
+.legend-dot { width: 9px; height: 9px; border-radius: 3px; display: inline-block; margin-right: 4px; flex-shrink: 0; }
+
+/* ── PLATFORM ROWS ─────────────────────────────────────────────────────── */
+.plat-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.plat-row:last-child { border-bottom: none; }
+.plat-icon { width: 40px; height: 40px; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 900; flex-shrink: 0; }
+.plat-name { font-weight: 700; font-size: 14px; }
+.plat-meta { font-size: 11px; color: var(--muted); margin-top: 3px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+
+/* ── BADGES ────────────────────────────────────────────────────────────── */
+.badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px; white-space: nowrap; }
+.b-green  { background: var(--teal-light);   color: var(--teal);   }
+.b-amber  { background: var(--amber-light);  color: var(--amber);  }
+.b-red    { background: var(--red-light);    color: var(--red);    }
+.b-blue   { background: var(--blue-light);   color: var(--blue);   }
+.b-gray   { background: var(--border);       color: var(--muted);  }
+.role-primary { background: var(--teal-light);   color: var(--teal);   }
+.role-backup  { background: var(--blue-light);   color: var(--blue);   }
+.role-promo   { background: var(--purple-light); color: var(--purple); }
+
+/* ── ALERTS ────────────────────────────────────────────────────────────── */
+.alert { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: var(--radius-sm); margin-bottom: 10px; font-size: 13px; line-height: 1.55; border: 1px solid; }
+.alert-red    { background: var(--red-light);    border-color: #F7C1C1; color: var(--red);    }
+.alert-amber  { background: var(--amber-light);  border-color: #FAC775; color: var(--amber);  }
+.alert-green  { background: var(--teal-light);   border-color: #9FE1CB; color: var(--teal);   }
+.alert-purple { background: var(--purple-light); border-color: #CECBF6; color: var(--purple); }
+.alert-blue   { background: var(--blue-light);   border-color: #B5D4F4; color: var(--blue);   }
+
+/* ── INPUTS ────────────────────────────────────────────────────────────── */
+.inp-group { margin-bottom: 14px; }
+.inp-label { font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 7px; }
+.inp-prefix { position: relative; }
+.inp-prefix .inp { padding-left: 40px; }
+.inp-prefix::before { content: 'RM'; position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 13px; font-weight: 700; color: var(--muted); pointer-events: none; }
+.inp {
+  width: 100%; padding: 13px 14px; border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border); background: var(--card); color: var(--text);
+  font-size: 18px; font-weight: 800; outline: none;
+  font-family: inherit; -webkit-appearance: none; transition: border-color .15s;
+}
+.inp:focus { border-color: var(--teal-mid); }
+.inp.sm { font-size: 14px; font-weight: 600; padding: 11px 14px; }
+
+/* ── SEGMENTED CONTROL ─────────────────────────────────────────────────── */
+.seg-ctrl { display: flex; background: var(--border); border-radius: var(--radius-sm); padding: 3px; gap: 3px; margin-bottom: 14px; }
+.seg-btn { flex: 1; padding: 9px 4px; border-radius: 8px; border: none; background: none; font-size: 12px; font-weight: 700; color: var(--muted); cursor: pointer; font-family: inherit; transition: all .15s; text-align: center; white-space: nowrap; }
+.seg-btn.active { background: var(--card); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+
+/* ── BUTTONS ───────────────────────────────────────────────────────────── */
+.btn { width: 100%; padding: 14px; border-radius: var(--radius-sm); font-size: 15px; font-weight: 800; border: none; cursor: pointer; font-family: inherit; transition: opacity .15s; }
+.btn:active { opacity: .85; }
+.btn-primary { background: var(--teal);       color: #fff; }
+.btn-coral   { background: #D85A30;            color: #fff; }
+.btn-ghost   { background: var(--border);      color: var(--text); margin-top: 8px; }
+.btn-danger  { background: var(--red-light);   color: var(--red); }
+.btn-sm { padding: 8px 14px; font-size: 12px; width: auto; border-radius: 8px; font-weight: 700; border: none; cursor: pointer; font-family: inherit; }
+
+/* ── LOG GRID ──────────────────────────────────────────────────────────── */
+.log-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.log-card { background: var(--card); border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 12px; cursor: pointer; user-select: none; transition: border-color .15s; }
+.log-card.selected { border-color: var(--teal-mid); background: var(--teal-light); }
+.lc-name { font-size: 12px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lc-sub  { font-size: 10px; color: var(--muted); margin-top: 2px; }
+.lc-bal  { font-size: 17px; font-weight: 900; margin-top: 7px; }
+
+/* ── CATEGORY CHIPS ────────────────────────────────────────────────────── */
+.cat-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.cat-chip { padding: 7px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; border: 1.5px solid var(--border); background: var(--card); color: var(--muted); cursor: pointer; transition: all .15s; }
+.cat-chip.selected { border-color: var(--coral); background: var(--coral-light); color: var(--coral); }
+
+/* ── STATS ─────────────────────────────────────────────────────────────── */
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.stat-box { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 13px; }
+.stat-box .sv { font-size: 21px; font-weight: 900; letter-spacing: -.5px; }
+.stat-box .sl { font-size: 11px; color: var(--muted); margin-top: 3px; }
+
+/* ── EAR BARS ──────────────────────────────────────────────────────────── */
+.ear-bar-row { margin-bottom: 13px; }
+.ear-bar-top { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 5px; flex-wrap: wrap; gap: 4px; }
+.ear-bar-bg  { height: 9px; background: var(--border); border-radius: 20px; overflow: hidden; }
+.ear-bar-fill { height: 100%; border-radius: 20px; transition: width .5s; }
+.trend-chip { display: inline-flex; align-items: center; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 20px; }
+.trend-up   { background: var(--teal-light); color: var(--teal); }
+.trend-down { background: var(--red-light);  color: var(--red);  }
+.trend-flat { background: var(--border);     color: var(--muted);}
+
+/* ── TIP ITEMS ─────────────────────────────────────────────────────────── */
+.tip-item { display: flex; gap: 10px; align-items: flex-start; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 13px; line-height: 1.55; }
+.tip-item:last-child { border-bottom: none; }
+.tip-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+
+/* ── PLATFORM MANAGE ───────────────────────────────────────────────────── */
+.plat-manage-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 13px; margin-bottom: 10px; }
+.pm-actions { display: flex; gap: 8px; margin-top: 10px; }
+
+/* ── SETTINGS ROWS ─────────────────────────────────────────────────────── */
+.set-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.set-row label { flex: 1; font-size: 13px; font-weight: 700; }
+.mini-inp { padding: 8px 10px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--card); color: var(--text); font-size: 14px; font-weight: 800; text-align: center; font-family: inherit; outline: none; width: 80px; }
+.mini-inp:focus { border-color: var(--teal-mid); }
+.mini-inp.wide { width: 120px; text-align: left; padding-left: 28px; }
+.rm-prefix { position: relative; display: inline-block; }
+.rm-prefix::before { content: 'RM'; position: absolute; left: 8px; top: 50%; transform: translateY(-50%); font-size: 11px; font-weight: 700; color: var(--muted); pointer-events: none; }
+
+/* ── MODAL ─────────────────────────────────────────────────────────────── */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 200; display: flex; align-items: flex-end; justify-content: center; }
+.modal-overlay.hidden { display: none; }
+.modal-sheet { background: var(--card); border-radius: 20px 20px 0 0; padding: 24px 20px; width: 100%; max-width: 430px; height: 88vh; overflow-y: scroll; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; padding-bottom: calc(40px + var(--safe-bot)); }
+.modal-title { font-size: 18px; font-weight: 800; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+.modal-close { background: var(--border); border: none; border-radius: 50%; width: 30px; height: 30px; font-size: 16px; cursor: pointer; color: var(--text); display: flex; align-items: center; justify-content: center; }
+
+/* ── REPORT ────────────────────────────────────────────────────────────── */
+.report-block { background: var(--bg); border-radius: var(--radius-sm); padding: 13px; margin-bottom: 10px; border: 1px solid var(--border); }
+.rb-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 8px; }
+.report-row { display: flex; justify-content: space-between; font-size: 13px; padding: 5px 0; border-bottom: 1px solid var(--border); }
+.report-row:last-child { border-bottom: none; }
+.report-row .rv { font-weight: 700; }
+
+/* ── HISTORY ROWS ──────────────────────────────────────────────────────── */
+.hist-row { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.hist-row:last-child { border-bottom: none; }
+.hist-date { color: var(--muted); min-width: 48px; font-size: 11px; font-weight: 600; }
+
+/* ── PROMO ROWS ────────────────────────────────────────────────────────── */
+.promo-row { display: flex; align-items: center; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.promo-row:last-child { border-bottom: none; }
+.promo-info { flex: 1; min-width: 0; }
+.promo-name   { font-weight: 700; font-size: 14px; }
+.promo-detail { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+/* ── SYNC DOT ──────────────────────────────────────────────────────────── */
+.sync-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-left: 6px; vertical-align: middle; }
+.sync-ok      { background: #1D9E75; }
+.sync-pending { background: #BA7517; animation: pulse 1s infinite; }
+.sync-err     { background: #A32D2D; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+/* ── TOAST ─────────────────────────────────────────────────────────────── */
+.toast {
+  position: fixed; bottom: calc(var(--nav-h) + var(--safe-bot) + 12px);
+  left: 50%; transform: translateX(-50%) translateY(10px);
+  background: #1A1A18; color: #fff;
+  padding: 10px 22px; border-radius: 30px; font-size: 13px; font-weight: 700;
+  opacity: 0; transition: all .25s; z-index: 500; white-space: nowrap; pointer-events: none;
+}
+@media(prefers-color-scheme:dark){ .toast { background: #E8E6DE; color: #1A1A18; } }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ── MISC ──────────────────────────────────────────────────────────────── */
+.empty-state { text-align: center; padding: 24px 0; color: var(--muted); font-size: 13px; line-height: 1.6; }
+.del-btn { background: var(--red-light); color: var(--red); border: none; border-radius: 8px; padding: 6px 10px; font-size: 13px; cursor: pointer; font-weight: 700; flex-shrink: 0; }
+.sum-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.sum-row:last-child { border-bottom: none; }
+</style>
+</head>
+<body>
+
+<!-- ── LOADING ──────────────────────────────────────────────────────────── -->
+<div id="loading-screen">
+  <div style="font-size:48px">💍</div>
+  <div class="spinner"></div>
+  <div style="font-size:13px;color:var(--muted)">连接中...</div>
+</div>
+
+<!-- ── AUTH ─────────────────────────────────────────────────────────────── -->
+<div id="auth-screen" style="display:none">
+  <div style="font-size:80px;margin-bottom:24px">💍</div>
+  <div style="font-size:28px;font-weight:900;letter-spacing:-.8px;margin-bottom:8px">Wedding Fund</div>
+  <div style="font-size:14px;color:var(--muted);margin-bottom:40px;line-height:1.6">
+    你们的婚礼财务管理系统<br>两人实时同步，随时掌握进度
+  </div>
+  <button class="auth-btn" id="google-signin-btn">
+    <svg viewBox="0 0 24 24">
+      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
+      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+    </svg>
+    使用 Google 账号登入
+  </button>
+  <div id="auth-loading" style="font-size:13px;color:var(--muted);margin-top:16px;display:none">登入中...</div>
+</div>
+
+<!-- ── MAIN APP ──────────────────────────────────────────────────────────── -->
+<div id="main-app" style="display:none">
+<div id="app">
+
+  <!-- HOME -->
+  <div id="screen-home" class="screen active">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Wedding Fund</div>
+        <div class="page-sub" id="today-date"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="sync-dot sync-ok" id="sync-dot"></span>
+        <button id="go-settings-btn" style="font-size:22px;background:none;border:none;cursor:pointer;color:var(--text)">&#9881;&#65039;</button>
+      </div>
+    </div>
+    <div class="hero">
+      <div class="hero-label">我的总资产</div>
+      <div class="hero-val" id="h-total">RM 0</div>
+      <div class="hero-row">
+        <div class="hero-stat"><div class="v" id="h-blended">0.00%</div><div class="l">综合 EAR</div></div>
+        <div class="hero-stat"><div class="v" id="h-daily">RM 0.00</div><div class="l">预计日息</div></div>
+        <div class="hero-stat"><div class="v" id="h-today-int" style="color:rgba(255,255,255,.4)">—</div><div class="l">今日实际息</div></div>
+        <div class="hero-stat"><div class="v" id="h-monthly">RM 0</div><div class="l">预计月息</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-label">真实婚礼进度</div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2px">
+        <span style="font-size:13px;color:var(--muted)">目标 <span id="h-my-goal" style="font-weight:700;color:var(--text)">RM 0</span></span>
+        <span style="font-size:22px;font-weight:900;color:var(--teal)" id="h-true-pct">0%</span>
+      </div>
+      <div class="prog-stacked">
+        <div class="prog-savings" id="h-bar-savings" style="width:0%"></div>
+        <div class="prog-spent"   id="h-bar-spent"   style="width:0%"></div>
+      </div>
+      <div class="legend">
+        <span><span class="legend-dot" style="background:linear-gradient(90deg,#C9A84C,#FFD700)"></span>储蓄 <strong id="leg-savings">RM 0</strong></span>
+        <span><span class="legend-dot" style="background:#D85A30"></span>已付婚费 <strong id="leg-spent">RM 0</strong></span>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-top:8px">
+        还差 <span id="h-true-gap" style="font-weight:800;color:var(--text)">RM 0</span>
+        &middot; 预计 <span id="h-eta" style="font-weight:800;color:var(--teal)">—</span>
+      </div>
+    </div>
+    <div class="joint-card">
+      <div style="font-size:11px;opacity:.7;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">💍 联合婚礼基金</div>
+      <div class="joint-total" id="j-total">RM 0</div>
+      <div style="font-size:12px;opacity:.65;margin-top:2px">目标 <span id="j-goal">RM 0</span> &middot; <span id="j-pct">0%</span></div>
+      <div style="height:7px;background:rgba(255,255,255,.2);border-radius:20px;overflow:hidden;margin:10px 0 6px">
+        <div style="display:flex;height:100%">
+          <div id="j-bar-me"  style="background:#1D9E75;transition:width .6s;height:100%"></div>
+          <div id="j-bar-her" style="background:#7F77DD;transition:width .6s;height:100%"></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;font-size:11px;opacity:.8;margin-bottom:12px;flex-wrap:wrap">
+        <span>&#128994; 我 <span id="j-me-pct">0%</span></span>
+        <span>&#128995; 伴侣 <span id="j-her-pct">0%</span></span>
+        <span style="margin-left:auto">还差 <strong id="j-gap">RM 0</strong></span>
+      </div>
+      <div class="joint-row">
+        <div class="joint-part"><div class="jl">我的合计</div><div class="jv" id="j-me-amt">RM 0</div></div>
+        <div class="joint-part"><div class="jl">伴侣合计</div><div class="jv" id="j-her-amt">RM 0</div></div>
+      </div>
+    </div>
+    <div class="card" id="home-budget-card" style="display:none">
+      <div class="card-label">婚礼预算进度</div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
+        <span style="font-size:13px;color:var(--muted)">总预算 <span id="hb-total" style="font-weight:700;color:var(--text)">RM 0</span></span>
+        <span style="font-size:18px;font-weight:900;color:var(--coral)" id="hb-pct">0%</span>
+      </div>
+      <div style="height:8px;background:var(--border);border-radius:20px;overflow:hidden;display:flex;margin:6px 0">
+        <div id="hb-bar-me"  style="background:#D85A30;transition:width .5s;height:100%"></div>
+        <div id="hb-bar-her" style="background:#7F77DD;transition:width .5s;height:100%"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:4px">
+        <span>已付 <strong id="hb-paid" style="color:var(--text)">RM 0</strong></span>
+        <span>尾款 <strong id="hb-balance" style="color:var(--amber)">RM 0</strong></span>
+        <span>结余 <strong id="hb-surplus" style="color:var(--teal)">RM 0</strong></span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-label">平台状态</div>
+      <div id="platform-overview"></div>
+    </div>
+    <div id="promo-alerts"></div>
+    <div id="alerts-section"></div>
+  </div>
+
+  <!-- LOG -->
+  <div id="screen-log" class="screen">
+    <div class="page-header"><div><div class="page-title">记录今日</div><div class="page-sub">更新各平台余额</div></div></div>
+    <div class="sec-label" style="margin-top:0">选择平台</div>
+    <div class="log-grid" id="log-grid"></div>
+    <div class="card">
+      <div class="card-label" id="log-form-title">平台</div>
+      <div class="inp-group">
+        <div class="inp-label">今日最新余额 (RM)</div>
+        <div class="inp-prefix"><input class="inp" type="number" id="inp-balance" placeholder="0.00" inputmode="decimal" step="0.01"></div>
+      </div>
+      <div class="inp-group">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
+          <div class="inp-label" style="margin:0">今日入金/出金 (RM) — 选填</div>
+          <div style="display:flex;gap:6px">
+            <button id="flow-in-btn"  class="flow-btn" data-dir="in"  style="padding:4px 10px;border-radius:20px;border:1.5px solid var(--teal);background:var(--teal-light);color:var(--teal);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">+ 入金</button>
+            <button id="flow-out-btn" class="flow-btn" data-dir="out" style="padding:4px 10px;border-radius:20px;border:1.5px solid var(--border);background:var(--card);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">- 出金</button>
+          </div>
+        </div>
+        <div class="inp-prefix"><input class="inp sm" type="number" id="inp-flow" placeholder="0.00 (填了才准确计算利息)" inputmode="decimal" step="0.01"></div>
+        <div style="font-size:11px;color:var(--muted);margin-top:5px" id="auto-int-preview"></div>
+      </div>
+      <button class="btn btn-primary" id="save-entry-btn">✓ 保存记录</button>
+      <button class="btn btn-ghost"   id="skip-entry-btn">跳过，记录下一个</button>
+    </div>
+    <div class="card">
+      <div class="card-label">今日已记录</div>
+      <div id="today-logged"><div class="empty-state">今天还没有记录</div></div>
+    </div>
+  </div>
+
+  <!-- INFLOW -->
+  <div id="screen-inflow" class="screen">
+    <div class="page-header"><div><div class="page-title">入金分配</div><div class="page-sub">新收入 · 智能分配建议</div></div></div>
+    <div class="seg-ctrl" id="inflow-mode-ctrl">
+      <button class="seg-btn active" data-mode="salary">💼 月薪</button>
+      <button class="seg-btn"        data-mode="bonus">🎉 奖金/佣金</button>
+    </div>
+    <div class="card">
+      <div class="card-label" id="inflow-card-label">本月月薪</div>
+      <div class="inp-group" style="margin-top:4px">
+        <div class="inp-label" id="inflow-amt-label">收到金额 (RM)</div>
+        <div class="inp-prefix"><input class="inp" type="number" id="inflow-amt" placeholder="0.00" inputmode="decimal" step="100"></div>
+      </div>
+      <div id="salary-fields">
+        <div class="inp-group">
+          <div class="inp-label">生活开销预留 (RM)</div>
+          <div class="inp-prefix"><input class="inp sm" type="number" id="inflow-living" placeholder="0.00" inputmode="decimal" step="100"></div>
+        </div>
+        <div class="inp-group">
+          <div class="inp-label">婚礼基金定存 (RM)</div>
+          <div class="inp-prefix"><input class="inp sm" type="number" id="inflow-wedding-fixed" inputmode="decimal" step="100"></div>
+        </div>
+      </div>
+      <div id="bonus-fields" style="display:none">
+        <div style="margin-bottom:14px">
+          <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px"><span>婚礼储备金</span><span id="b-pct-wedding" style="color:var(--teal)">50%</span></div>
+          <input type="range" id="sl-wedding"   min="0" max="80" value="50" step="5" style="width:100%">
+        </div>
+        <div style="margin-bottom:14px">
+          <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px"><span>优化器资金</span><span id="b-pct-optimizer" style="color:var(--purple)">20%</span></div>
+          <input type="range" id="sl-optimizer" min="0" max="60" value="20" step="5" style="width:100%">
+        </div>
+        <div style="margin-bottom:14px">
+          <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px"><span>自己奖励</span><span id="b-pct-personal" style="color:var(--amber)">20%</span></div>
+          <input type="range" id="sl-personal"  min="0" max="60" value="20" step="5" style="width:100%">
+        </div>
+        <div style="margin-bottom:4px">
+          <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px"><span>紧急备用</span><span id="b-pct-emergency" style="color:var(--blue)">10%</span></div>
+          <input type="range" id="sl-emergency" min="0" max="40" value="10" step="5" style="width:100%">
+        </div>
+        <div id="bonus-pct-warning" style="font-size:12px;margin-top:8px;padding:8px 10px;border-radius:8px;display:none"></div>
+      </div>
+    </div>
+    <div class="card" id="inflow-result-card" style="display:none">
+      <div class="card-label">分配建议</div>
+      <div id="inflow-result-body"></div>
+      <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+        <div class="card-label">平台建议</div>
+        <div id="inflow-plat-advice"></div>
+      </div>
+      <div id="inflow-promo-tip"></div>
+    </div>
+    <div class="sec-label">分配原则</div>
+    <div class="card"><div style="font-size:13px;line-height:1.7" id="inflow-rules-body"></div></div>
+  </div>
+
+  <!-- EXPENSES / BUDGET -->
+  <div id="screen-expenses" class="screen">
+    <div class="page-header"><div><div class="page-title">婚礼预算</div><div class="page-sub">共享规划 · 追踪开销</div></div></div>
+    <div class="card">
+      <div class="card-label">预算总览</div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
+        <span style="font-size:13px;color:var(--muted)">总预算 <span id="bud-total" style="font-weight:800;color:var(--text)">RM 0</span></span>
+        <span style="font-size:11px;color:var(--muted)">已用 <span id="bud-used-pct" style="font-weight:700;color:var(--coral)">0%</span></span>
+      </div>
+      <div style="height:10px;background:var(--border);border-radius:20px;overflow:hidden;display:flex;margin:6px 0">
+        <div id="bud-bar-me"  style="background:#D85A30;transition:width .5s;height:100%"></div>
+        <div id="bud-bar-her" style="background:#7F77DD;transition:width .5s;height:100%"></div>
+      </div>
+      <div style="display:flex;gap:14px;font-size:11px;color:var(--muted);margin-bottom:12px;flex-wrap:wrap">
+        <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#D85A30;margin-right:4px"></span>我付 <strong id="bud-me-paid" style="color:var(--text)">RM 0</strong></span>
+        <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#7F77DD;margin-right:4px"></span>她付 <strong id="bud-her-paid" style="color:var(--text)">RM 0</strong></span>
+        <span style="margin-left:auto">尾款 <strong id="bud-remaining" style="color:var(--teal)">RM 0</strong></span>
+      </div>
+      <div style="border-top:1px solid var(--border);padding-top:10px">
+        <div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0"><span style="color:var(--muted)">总已付</span><span style="font-weight:800" id="bud-total-paid">RM 0</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0"><span style="color:var(--muted)">尾款待付</span><span style="font-weight:800;color:var(--amber)" id="bud-total-balance">RM 0</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0"><span style="color:var(--muted)">预算结余</span><span style="font-weight:800" id="bud-surplus">RM 0</span></div>
+      </div>
+    </div>
+    <div class="seg-ctrl" id="exp-tab-ctrl">
+      <button class="seg-btn active" data-tab="list">📋 明细</button>
+      <button class="seg-btn"        data-tab="add-item">+ 新增项目</button>
+      <button class="seg-btn"        data-tab="add-payment">💰 记录付款</button>
+    </div>
+    <div id="exp-tab-list">
+      <div id="budget-items-list"><div class="empty-state">还没有预算项目</div></div>
+    </div>
+    <div id="exp-tab-add-item" style="display:none">
+      <div class="card">
+        <div class="card-label" id="bitem-form-label">新增预算项目</div>
+        <div class="inp-group" style="margin-top:4px"><div class="inp-label">类别</div><div class="cat-grid" id="cat-grid"></div></div>
+        <div class="inp-group"><div class="inp-label">项目名称</div><input class="inp sm" type="text" id="bitem-name" placeholder="例：婚宴厅、摄影套餐"></div>
+        <div class="inp-group"><div class="inp-label">预算金额 (RM)</div><div class="inp-prefix"><input class="inp" type="number" id="bitem-budget" placeholder="0.00" inputmode="decimal" step="100"></div></div>
+        <div class="inp-group"><div class="inp-label">备注 — 选填</div><input class="inp sm" type="text" id="bitem-note" placeholder="例：包括布置、音响"></div>
+        <div id="bitem-preview" style="background:var(--teal-light);border-radius:var(--radius-sm);padding:10px 12px;font-size:12px;color:var(--teal);margin-bottom:14px;display:none"></div>
+        <input type="hidden" id="bitem-editing-id">
+        <button class="btn btn-coral" id="save-bitem-btn">保存项目</button>
+        <button class="btn btn-ghost" data-tab="list" id="cancel-bitem-btn">取消</button>
+      </div>
+      <div class="card">
+        <div class="card-label">自定义类别</div>
+        <div id="custom-cats-list" style="margin-bottom:10px"></div>
+        <div style="display:flex;gap:8px">
+          <input class="inp sm" type="text" id="new-cat-name" placeholder="类别名称" style="flex:1">
+          <input class="inp sm" type="text" id="new-cat-icon" placeholder="🎂" style="width:60px;text-align:center">
+          <button class="btn-sm" id="add-custom-cat-btn" style="background:var(--teal);color:#fff;flex-shrink:0">添加</button>
+        </div>
+      </div>
+    </div>
+    <div id="exp-tab-add-payment" style="display:none">
+      <div class="card">
+        <div class="card-label">记录付款</div>
+        <div class="inp-group" style="margin-top:4px"><div class="inp-label">归入哪个项目？</div><select class="inp sm" id="pay-item-sel" style="font-size:14px;font-weight:700"></select></div>
+        <div class="inp-group">
+          <div class="inp-label">谁付的？</div>
+          <div style="display:flex;gap:8px">
+            <button id="pby-me-btn"  class="pby-btn" data-who="me"  style="flex:1;padding:12px;border-radius:var(--radius-sm);border:1.5px solid var(--coral);background:var(--coral-light);color:var(--coral);font-size:14px;font-weight:800;cursor:pointer;font-family:inherit">我付 💰</button>
+            <button id="pby-her-btn" class="pby-btn" data-who="her" style="flex:1;padding:12px;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--card);color:var(--muted);font-size:14px;font-weight:800;cursor:pointer;font-family:inherit">她/他付 💜</button>
+          </div>
+          <div style="font-size:11px;color:var(--teal);margin-top:6px" id="pby-hint">✅ 算入我的婚礼进度</div>
+        </div>
+        <div class="inp-group"><div class="inp-label">付款金额 (RM)</div><div class="inp-prefix"><input class="inp" type="number" id="exp-amt" placeholder="0.00" inputmode="decimal" step="0.01"></div></div>
+        <div class="inp-group"><div class="inp-label">付款日期</div><input class="inp sm" type="date" id="exp-date"></div>
+        <div class="inp-group"><div class="inp-label">备注 — 选填</div><input class="inp sm" type="text" id="exp-note" placeholder="例：订金，尾款婚前一个月"></div>
+        <button class="btn btn-coral" id="add-expense-btn">✓ 记录付款</button>
+        <button class="btn btn-ghost" data-tab="list" id="cancel-payment-btn">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ANALYSIS -->
+  <div id="screen-analysis" class="screen">
+    <div class="page-header"><div><div class="page-title">分析</div><div class="page-sub">EAR 趋势 · 决策建议</div></div></div>
+    <div class="stat-grid" id="stat-grid"></div>
+    <div class="card"><div class="card-label">平台 EAR 趋势</div><div id="ear-trend"></div></div>
+    <div class="card"><div class="card-label">Trailing 实际收益</div><div class="stat-grid" id="trailing-stats" style="margin-bottom:0"></div></div>
+    <div class="card"><div class="card-label">决策建议</div><div id="decision-advice"></div></div>
+    <div class="card">
+      <div class="card-label">婚礼基金模拟</div>
+      <div class="inp-group" style="margin-top:6px"><div class="inp-label">我的目标 (RM)</div><div class="inp-prefix"><input class="inp sm" type="number" id="sim-mygoal" inputmode="decimal"></div></div>
+      <div class="inp-group"><div class="inp-label">每月储蓄 (RM)</div><div class="inp-prefix"><input class="inp sm" type="number" id="sim-topup" inputmode="decimal"></div></div>
+      <div id="sim-result" style="background:var(--teal-light);border-radius:var(--radius-sm);padding:13px;font-size:13px;color:var(--teal);line-height:1.65;border:1px solid rgba(15,110,86,.15)">输入目标查看预测</div>
+    </div>
+    <div id="monthly-report-section"></div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div id="screen-settings" class="screen">
+    <div class="page-header"><div><div class="page-title">设置</div></div><button id="signout-btn" style="font-size:12px;color:var(--muted);background:none;border:none;cursor:pointer;padding:6px;font-weight:700">登出</button></div>
+    <div class="card">
+      <div class="card-label">账号</div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <img id="user-photo" style="width:40px;height:40px;border-radius:50%;display:none" alt="">
+        <div><div id="user-name" style="font-weight:700;font-size:15px"></div><div id="user-email" style="font-size:12px;color:var(--muted)"></div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-label">连接伴侣账号 <span id="partner-status-badge"></span></div>
+      <div id="partner-section"></div>
+      <button id="migrate-data-btn" class="btn btn-primary" style="padding:12px;margin-top:4px">
+        🔄 同步旧预算数据给伴侣
+      </button>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px;margin-bottom:4px">
+        连接伴侣后点此，把你之前的预算数据同步给对方
+      </div>
+    </div>
+    <div class="sec-label" style="margin-top:0">平台管理</div>
+    <div id="plat-manage-list"></div>
+    <button class="btn btn-primary" id="add-plat-btn" style="margin-bottom:16px">+ 添加新平台</button>
+    <div class="card">
+      <div class="card-label">婚礼基金目标</div>
+      <div class="set-row"><label>联合总目标</label><div class="rm-prefix"><input class="mini-inp wide" type="number" id="set-joint-goal"></div></div>
+      <div class="set-row"><label>我的目标金额</label><div class="rm-prefix"><input class="mini-inp wide" type="number" id="set-my-goal"></div></div>
+      <div class="set-row"><label>每月储蓄目标</label><div class="rm-prefix"><input class="mini-inp wide" type="number" id="set-topup"></div></div>
+      <button class="btn btn-primary" id="save-goals-btn" style="padding:12px;margin-top:4px">保存目标</button>
+    </div>
+    <div class="card">
+      <div class="card-label">Promo 管理</div>
+      <div class="inp-group" style="margin-top:4px"><div class="inp-label">平台</div><select class="inp sm" id="promo-platform" style="font-size:13px;font-weight:700"></select></div>
+      <div class="inp-group"><div class="inp-label">Promo 利率 (%)</div><input class="inp sm" type="number" id="promo-rate" placeholder="4.5" step="0.1" inputmode="decimal"></div>
+      <div class="inp-group"><div class="inp-label">到期日</div><input class="inp sm" type="date" id="promo-expiry" style="font-size:14px"></div>
+      <div class="inp-group"><div class="inp-label">备注（选填）</div><input class="inp sm" type="text" id="promo-note" placeholder="例：新用户 fresh funds 90天"></div>
+      <button class="btn btn-primary" id="add-promo-btn" style="padding:12px">+ 添加 Promo</button>
+      <div style="margin-top:12px" id="promo-full-list"></div>
+    </div>
+    <div class="card">
+      <div class="card-label">通知设置</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;font-size:14px">
+        <span>每日记录提醒（晚上8点）</span>
+        <button id="notif-btn" style="padding:8px 16px;border-radius:20px;border:1.5px solid var(--teal);background:var(--teal-light);color:var(--teal);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">开启</button>
+      </div>
+      <div id="notif-status" style="font-size:12px;color:var(--muted);margin-top:8px"></div>
+    </div>
+    <div class="card"><div class="card-label">历史记录（最近 60 条）</div><div id="history-list"></div></div>
+  </div>
+
+</div><!-- end #app -->
+
+<!-- PLATFORM MODAL -->
+<div class="modal-overlay hidden" id="plat-modal">
+  <div class="modal-sheet">
+    <div class="modal-title">
+      <span id="plat-modal-title">添加新平台</span>
+      <button class="modal-close" id="close-plat-modal-btn">✕</button>
+    </div>
+    <div class="inp-group"><div class="inp-label">平台名称</div><input class="inp sm" type="text" id="pm-name" placeholder="例：Versa、GX Bank FD"></div>
+    <div class="inp-group"><div class="inp-label">简称（3–4 字）</div><input class="inp sm" type="text" id="pm-short" placeholder="例：VER" maxlength="4" style="text-transform:uppercase"></div>
+    <div class="inp-group"><div class="inp-label">当前 EAR (%)</div><input class="inp sm" type="number" id="pm-ear" placeholder="3.5" step="0.1" inputmode="decimal"></div>
+    <div class="inp-group"><div class="inp-label">流动性</div>
+      <div class="seg-ctrl" id="pm-liquid-ctrl">
+        <button class="seg-btn active" data-liquid="T+0">T+0</button>
+        <button class="seg-btn"        data-liquid="T+1">T+1</button>
+        <button class="seg-btn"        data-liquid="T+2">T+2</button>
+        <button class="seg-btn"        data-liquid="locked">锁定</button>
+      </div>
+    </div>
+    <div class="inp-group"><div class="inp-label">角色</div>
+      <div class="seg-ctrl" id="pm-role-ctrl">
+        <button class="seg-btn active" data-role="primary">主力</button>
+        <button class="seg-btn"        data-role="backup">备用</button>
+        <button class="seg-btn"        data-role="promo">Promo</button>
+      </div>
+    </div>
+    <div class="inp-group"><div class="inp-label">颜色</div><div style="display:flex;gap:8px;flex-wrap:wrap" id="pm-color-grid"></div></div>
+    <input type="hidden" id="pm-editing-id">
+    <button class="btn btn-primary" id="save-plat-btn">保存平台</button>
+    <button class="btn btn-ghost"   id="cancel-plat-btn">取消</button>
+    <button class="btn btn-danger"  id="delete-plat-btn" style="display:none;margin-top:8px">删除此平台</button>
+  </div>
+</div>
+
+</div><!-- end main-app -->
+
+<nav class="bottom-nav" id="bottom-nav" style="display:none">
+  <button class="nav-btn active" data-screen="home">    <span class="nav-icon">&#127968;</span>主页</button>
+  <button class="nav-btn"        data-screen="log">     <span class="nav-icon">&#9999;&#65039;</span>记录</button>
+  <button class="nav-btn"        data-screen="inflow">  <span class="nav-icon">&#128184;</span>入金</button>
+  <button class="nav-btn"        data-screen="expenses"><span class="nav-icon">&#128176;</span>开销</button>
+  <button class="nav-btn"        data-screen="analysis"><span class="nav-icon">&#128202;</span>分析</button>
+  <button class="nav-btn"        data-screen="settings"><span class="nav-icon">&#9881;&#65039;</span>设置</button>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<!-- JS modules loaded here by main.js -->
+<script type="module">import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js';
+import { getFirestore, doc, collection, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, serverTimestamp, getDocs } from 'https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js';
+
+
+// ═══ firebase.js ═══
+
+// ── firebase.js ──────────────────────────────────────────────────────────
+// Firebase initialisation, Auth, and Firestore instance exports
+
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signOut,
+  onAuthStateChanged
+  getFirestore,
+  doc,
+  collection,
+  getDoc,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  onSnapshot,
+  serverTimestamp
+
+// ── CONFIG ────────────────────────────────────────────────────────────────
+const firebaseConfig = {
+  apiKey:            'AIzaSyBjlO7hRULsFiQEltY6skfEx9Dey4jN5eQ',
+  authDomain:        'jnw-wedding-fund-94ea1.firebaseapp.com',
+  projectId:         'jnw-wedding-fund-94ea1',
+  storageBucket:     'jnw-wedding-fund-94ea1.firebasestorage.app',
+  messagingSenderId: '290022512523',
+  appId:             '1:290022512523:web:963f6cb7e409206ccc418e'
+};
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+const firebaseApp = initializeApp(firebaseConfig);
+const auth        = getAuth(firebaseApp);
+const db          = getFirestore(firebaseApp);
+
+// ── FIRESTORE PATH HELPERS ────────────────────────────────────────────────
+// Call these after uid is set
+const userRef    = uid => doc(db, 'users', uid);
+const platCol    = uid => collection(db, 'users', uid, 'platforms');
+const entrCol    = uid => collection(db, 'users', uid, 'entries');
+const promoCol   = uid => collection(db, 'users', uid, 'promos');
+const catCol     = uid => collection(db, 'users', uid, 'customCats');
+const coupleRef  = cid => doc(db, 'couples', cid);
+const budgetCol  = cid => collection(db, 'couples', cid, 'budgetItems');
+const expCol     = cid => collection(db, 'couples', cid, 'expenses');
+const partEntrCol  = puid => collection(db, 'users', puid, 'entries');
+const partPlatCol  = puid => collection(db, 'users', puid, 'platforms');
+
+// ── FIRESTORE WRITE HELPERS ───────────────────────────────────────────────
+const fsSet = async (ref, data, merge = true) => {
+  await setDoc(ref, data, { merge });
+};
+
+const fsMerge = async (ref, data) => {
+  await setDoc(ref, data, { merge: true });
+};
+
+const fsDel = async ref => {
+  await deleteDoc(ref);
+};
+
+const fsUpdate = async (ref, data) => {
+  await updateDoc(ref, data);
+};
+
+const fsGet = async ref => {
+  return await getDoc(ref);
+};
+
+const fsListen = (ref, cb) => {
+  return onSnapshot(ref, cb);
+};
+
+
+
+// ── AUTH FUNCTIONS ────────────────────────────────────────────────────────
+const signInWithGoogle = async () => {
+  const provider = new GoogleAuthProvider();
+  return await signInWithPopup(auth, provider);
+};
+
+const signOutUser = async () => {
+  return await signOut(auth);
+};
+
+const onAuthChange = cb => {
+  return onAuthStateChanged(auth, cb);
+};
+
+// ── UI HELPERS (auth screens) ─────────────────────────────────────────────
+const showLoading = () => {
+  document.getElementById('loading-screen').style.display = 'flex';
+  document.getElementById('auth-screen').style.display    = 'none';
+  document.getElementById('main-app').style.display       = 'none';
+  document.getElementById('bottom-nav').style.display     = 'none';
+};
+
+const showAuth = () => {
+  document.getElementById('loading-screen').style.display = 'none';
+  document.getElementById('auth-screen').style.display    = 'flex';
+  document.getElementById('main-app').style.display       = 'none';
+  document.getElementById('bottom-nav').style.display     = 'none';
+  document.getElementById('auth-loading').style.display   = 'none';
+};
+
+const showApp = user => {
+  document.getElementById('loading-screen').style.display = 'none';
+  document.getElementById('auth-screen').style.display    = 'none';
+  document.getElementById('main-app').style.display       = 'flex';
+  document.getElementById('bottom-nav').style.display     = 'flex';
+  // Fill user profile
+  document.getElementById('user-name').textContent  = user.displayName || '用户';
+  document.getElementById('user-email').textContent = user.email || '';
+  if (user.photoURL) {
+    const img = document.getElementById('user-photo');
+    img.src = user.photoURL;
+    img.style.display = 'block';
+  }
+};
+
+// ── DEFAULT DATA ──────────────────────────────────────────────────────────
+const DEFAULT_PLATFORMS = [
+  { id:'moo', name:'Moomoo Cash+',     short:'MOO', color:'#1D9E75', bg:'#E1F5EE', ear:3.5, liquid:'T+1', role:'primary' },
+  { id:'web', name:'Webull Moneybull', short:'WEB', color:'#BA7517', bg:'#FAEEDA', ear:3.2, liquid:'T+1', role:'backup'  },
+  { id:'kdi', name:'KDI Save',         short:'KDI', color:'#A32D2D', bg:'#FCEBEB', ear:2.9, liquid:'T+0', role:'backup'  },
+];
+
+const DEFAULT_SETTINGS = {
+  my_goal:     50000,
+  joint_goal: 120000,
+  topup:        2000,
+};
+
+const DEFAULT_CATS = [
+  { id:'venue',  label:'婚宴厅', icon:'🏛️' },
+  { id:'photo',  label:'摄影',   icon:'📷' },
+  { id:'dress',  label:'婚纱',   icon:'👗' },
+  { id:'makeup', label:'化妆',   icon:'💄' },
+  { id:'decor',  label:'布置',   icon:'🌸' },
+  { id:'card',   label:'请柬',   icon:'💌' },
+  { id:'ring',   label:'戒指',   icon:'💍' },
+  { id:'food',   label:'餐饮',   icon:'🍽️' },
+  { id:'other',  label:'其他',   icon:'📦' },
+];
+
+const PLAT_COLORS = [
+  { id:'teal',   hex:'#1D9E75', bg:'#E1F5EE' },
+  { id:'blue',   hex:'#185FA5', bg:'#E6F1FB' },
+  { id:'amber',  hex:'#BA7517', bg:'#FAEEDA' },
+  { id:'purple', hex:'#534AB7', bg:'#EEEDFE' },
+  { id:'coral',  hex:'#993C1D', bg:'#FAECE7' },
+  { id:'red',    hex:'#A32D2D', bg:'#FCEBEB' },
+  { id:'green',  hex:'#3B6D11', bg:'#EAF3DE' },
+  { id:'pink',   hex:'#993556', bg:'#FBEAF0' },
+];
+
+
+// ═══ data.js ═══
+
+// ── data.js ───────────────────────────────────────────────────────────────
+// App state, Firestore listeners, data calculation helpers
+
+  userRef, platCol, entrCol, promoCol, catCol,
+  budgetCol, expCol, partEntrCol, partPlatCol,
+  coupleRef,
+  fsSet, fsDel, fsGet, fsListen, serverTimestamp,
+  DEFAULT_PLATFORMS, DEFAULT_SETTINGS,
+
+  doc as fsDoc,
+
+// ── APP STATE ─────────────────────────────────────────────────────────────
+const state = {
+  uid:        null,
+  coupleId:   null,
+  partnerUid: null,
+
+  platforms:   [...DEFAULT_PLATFORMS],
+  entries:     [],
+  promos:      [],
+  customCats:  [],
+  settings:    { ...DEFAULT_SETTINGS },
+
+  budgetItems:      [],
+  expenses:         [],
+  partnerEntries:   [],
+  partnerPlatforms: [],
+};
+
+let _unsubs = [];
+
+// ── SYNC DOT ──────────────────────────────────────────────────────────────
+const setSyncDot = status => {
+  const el = document.getElementById('sync-dot');
+  if (el) el.className = 'sync-dot sync-' + status;
+};
+
+// ── TOAST ─────────────────────────────────────────────────────────────────
+const showToast = msg => {
+  const t = document.getElementById('toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2400);
+};
+
+// ── FIRESTORE SAFE WRITE ──────────────────────────────────────────────────
+const safeWrite = async (writeFn) => {
+  setSyncDot('pending');
+  try {
+    await writeFn();
+    setSyncDot('ok');
+  } catch (e) {
+    setSyncDot('err');
+    console.error('Firestore write error:', e);
+    throw e;
+  }
+};
+
+// ── LISTENERS ─────────────────────────────────────────────────────────────
+const stopListeners = () => {
+  _unsubs.forEach(u => u());
+  _unsubs = [];
+};
+
+const startMyListeners = (onUpdate) => {
+  const uid = state.uid;
+  if (!uid) return;
+
+  // Track current coupleId to detect changes
+  let _activeCoupleId = null;
+
+  _unsubs.push(fsListen(userRef(uid), snap => {
+    if (snap.exists()) {
+      const d = snap.data();
+      state.settings   = { ...DEFAULT_SETTINGS, ...(d.settings || {}) };
+      state.coupleId   = d.coupleId   || null;
+      state.partnerUid = d.partnerUid || null;
+
+      // If coupleId changed, restart budget/expense listeners with correct path
+      const newCoupleId = state.coupleId || ('solo_' + uid);
+      if (newCoupleId !== _activeCoupleId) {
+        _activeCoupleId = newCoupleId;
+        startCoupleListeners(onUpdate);
+      }
+    }
+    onUpdate('settings');
+  }));
+
+  _unsubs.push(fsListen(platCol(uid), snap => {
+    if (!snap.empty) state.platforms = snap.docs.map(d => d.data());
+    else             state.platforms = [...DEFAULT_PLATFORMS];
+    onUpdate('platforms');
+  }));
+
+  _unsubs.push(fsListen(entrCol(uid), snap => {
+    state.entries = snap.docs.map(d => d.data());
+    onUpdate('entries');
+  }));
+
+  _unsubs.push(fsListen(promoCol(uid), snap => {
+    state.promos = snap.docs.map(d => d.data());
+    onUpdate('promos');
+  }));
+
+  _unsubs.push(fsListen(catCol(uid), snap => {
+    state.customCats = snap.docs.map(d => d.data());
+    onUpdate('cats');
+  }));
+};
+
+const startCoupleListeners = (onUpdate) => {
+  // Use coupleId if connected, otherwise use personal solo bucket
+  const cid = state.coupleId || ('solo_' + state.uid);
+  if (!cid) return;
+
+  _unsubs.push(fsListen(budgetCol(cid), snap => {
+    state.budgetItems = snap.docs.map(d => d.data());
+    onUpdate('budget');
+  }));
+
+  _unsubs.push(fsListen(expCol(cid), snap => {
+    state.expenses = snap.docs.map(d => d.data());
+    onUpdate('expenses');
+  }));
+
+  if (state.partnerUid) {
+    _unsubs.push(fsListen(partEntrCol(state.partnerUid), snap => {
+      state.partnerEntries = snap.docs.map(d => d.data());
+      onUpdate('partnerEntries');
+    }));
+    _unsubs.push(fsListen(partPlatCol(state.partnerUid), snap => {
+      state.partnerPlatforms = snap.docs.map(d => d.data());
+      onUpdate('partnerPlatforms');
+    }));
+  }
+};
+
+// ── USER INIT ─────────────────────────────────────────────────────────────
+const ensureUserDoc = async (user) => {
+  const snap = await fsGet(userRef(user.uid));
+  if (!snap.exists()) {
+    await fsSet(userRef(user.uid), {
+      uid:         user.uid,
+      displayName: user.displayName,
+      email:       user.email,
+      photoURL:    user.photoURL || '',
+      settings:    { ...DEFAULT_SETTINGS },
+      createdAt:   serverTimestamp(),
+    });
+    for (const p of DEFAULT_PLATFORMS) {
+      await fsSet(_fsDoc(platCol(user.uid), p.id), p);
+    }
+  }
+};
+
+// ── WRITE HELPERS ─────────────────────────────────────────────────────────
+const savePlatform = async (p) => {
+  await safeWrite(() => fsSet(_fsDoc(platCol(state.uid), p.id), p));
+};
+
+const deletePlatform = async (id) => {
+  await fsDel(_fsDoc(platCol(state.uid), id));
+};
+
+const saveEntry = async (entry) => {
+  await safeWrite(() => fsSet(_fsDoc(entrCol(state.uid), entry.id), entry));
+};
+
+const deleteEntry = async (id) => {
+  await fsDel(_fsDoc(entrCol(state.uid), id));
+};
+
+const savePromo = async (p) => {
+  await safeWrite(() => fsSet(_fsDoc(promoCol(state.uid), p.id), p));
+};
+
+const deletePromo = async (id) => {
+  await fsDel(_fsDoc(promoCol(state.uid), id));
+};
+
+const saveCustomCat = async (cat) => {
+  await fsSet(_fsDoc(catCol(state.uid), cat.id), cat);
+};
+
+const deleteCustomCat = async (id) => {
+  await fsDel(_fsDoc(catCol(state.uid), id));
+};
+
+const saveUserSettings = async (settings) => {
+  await safeWrite(() => fsSet(userRef(state.uid), { settings }, true));
+};
+
+const saveBudgetItem = async (item) => {
+  const cid = state.coupleId || ('solo_' + state.uid);
+  await safeWrite(() => fsSet(_fsDoc(budgetCol(cid), item.id), item));
+};
+
+const deleteBudgetItem = async (id) => {
+  const cid = state.coupleId || ('solo_' + state.uid);
+  await fsDel(_fsDoc(budgetCol(cid), id));
+};
+
+const saveExpense = async (exp) => {
+  const cid = state.coupleId || ('solo_' + state.uid);
+  await safeWrite(() => fsSet(_fsDoc(expCol(cid), exp.id), exp));
+};
+
+const deleteExpense = async (id) => {
+  const cid = state.coupleId || ('solo_' + state.uid);
+  await fsDel(_fsDoc(expCol(cid), id));
+};
+
+// ── PARTNER ───────────────────────────────────────────────────────────────
+const connectPartner = async (partnerUID) => {
+  const uid  = state.uid;
+  const cId  = 'couple_' + [uid, partnerUID].sort().join('_');
+  const soloCid = 'solo_' + uid;
+
+  // Step 1: Create couple doc first (uses auth.uid in coupleId check)
+  await fsSet(coupleRef(cId), {
+    members:   [uid, partnerUID],
+    createdAt: serverTimestamp(),
+  }, true);
+
+  // Step 2: Update my own user doc
+  await fsSet(userRef(uid), {
+    coupleId:   cId,
+    partnerUid: partnerUID,
+  }, true);
+
+  // Step 3: Update partner's user doc (only coupleId + partnerUid fields)
+  await fsSet(userRef(partnerUID), {
+    coupleId:   cId,
+    partnerUid: uid,
+  }, true);
+
+  // Step 4: Migrate solo budget data → couple path
+  try {
+    // getDocs already imported at top
+    const biSnap = await getDocs(budgetCol(soloCid));
+    const exSnap = await getDocs(expCol(soloCid));
+    for (const d of biSnap.docs) await fsSet(_fsDoc(budgetCol(cId), d.id), d.data());
+    for (const d of exSnap.docs) await fsSet(_fsDoc(expCol(cId),    d.id), d.data());
+    console.log(`Migrated ${biSnap.size} budget items + ${exSnap.size} expenses`);
+  } catch (e) {
+    console.warn('Migration skipped:', e.message);
+  }
+
+  state.coupleId   = cId;
+  state.partnerUid = partnerUID;
+};
+
+const migrateSoloDataToCouple = async () => {
+  if (!state.coupleId || !state.uid) {
+    console.warn('Cannot migrate: no coupleId or uid');
+    return 0;
+  }
+  const soloCid = 'solo_' + state.uid;
+  try {
+    // getDocs already imported at top
+    const biSnap = await getDocs(budgetCol(soloCid));
+    const exSnap = await getDocs(expCol(soloCid));
+    let count = 0;
+    for (const d of biSnap.docs) {
+      await fsSet(_fsDoc(budgetCol(state.coupleId), d.id), d.data());
+      count++;
+    }
+    for (const d of exSnap.docs) {
+      await fsSet(_fsDoc(expCol(state.coupleId), d.id), d.data());
+      count++;
+    }
+    return count;
+  } catch (e) {
+    console.warn('Migration error:', e.message);
+    return 0;
+  }
+};
+
+const disconnectPartner = async () => {
+  await fsSet(userRef(state.uid), { coupleId: null, partnerUid: null }, true);
+  state.coupleId         = null;
+  state.partnerUid       = null;
+  state.budgetItems      = [];
+  state.expenses         = [];
+  state.partnerEntries   = [];
+  state.partnerPlatforms = [];
+};
+
+// ── HELPERS ───────────────────────────────────────────────────────────────
+const todayStr = () => new Date().toISOString().slice(0, 10);
+
+const fmtRM = (n, decimals = 0) =>
+  'RM ' + (n || 0).toLocaleString('en-MY', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  });
+
+const shortInitials = name =>
+  name.replace(/[^A-Za-z0-9\u4e00-\u9fa5]/g, '').slice(0, 3).toUpperCase() || '?';
+
+const getLatestBal = (pid) => {
+  const ents = state.entries
+    .filter(e => e.pid === pid)
+    .sort((a, b) => a.date.localeCompare(b.date));
+  return ents.length ? ents[ents.length - 1].bal : 0;
+};
+
+const totalBal = () =>
+  state.platforms.reduce((s, p) => s + getLatestBal(p.id), 0);
+
+const getPlatEAR = (p) => parseFloat(p.ear || 3.0);
+
+const blendedEAR = () => {
+  let tot = 0, wt = 0;
+  state.platforms.forEach(p => {
+    const b = getLatestBal(p.id);
+    tot += b; wt += b * getPlatEAR(p);
+  });
+  return tot > 0 ? wt / tot : 0;
+};
+
+const calcAutoInt = (pid, newBal, flow, dir) => {
+  const prev    = getLatestBal(pid);
+  if (!prev) return 0;
+  const flowAmt = parseFloat(flow) || 0;
+  const netFlow = dir === 'in' ? flowAmt : -flowAmt;
+  return Math.max(0, newBal - prev - netFlow);
+};
+
+const totalSpentBy = (who) =>
+  state.expenses
+    .filter(e => (e.paid_by || 'me') === who)
+    .reduce((s, e) => s + e.amt, 0);
+
+const partnerTotalBal = () => {
+  if (!state.partnerEntries.length) return 0;
+  const pids = new Set(state.partnerPlatforms.map(p => p.id));
+  let tot = 0;
+  pids.forEach(pid => {
+    const ents = state.partnerEntries
+      .filter(e => e.pid === pid)
+      .sort((a, b) => a.date.localeCompare(b.date));
+    if (ents.length) tot += ents[ents.length - 1].bal;
+  });
+  return tot;
+};
+
+const getTodayEntries = () =>
+  state.entries.filter(e => e.date === todayStr());
+
+const trailingEAR = (pid, days) => {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - days);
+  const rel = state.entries.filter(
+    e => e.pid === pid && (e.autoInt || 0) > 0 && new Date(e.date) >= cutoff
+  );
+  if (rel.length < 2) return null;
+  const ti = rel.reduce((s, e) => s + (e.autoInt || 0), 0);
+  const ab = rel.reduce((s, e) => s + e.bal, 0) / rel.length;
+  return ab > 0 ? (ti / ab) * (365 / rel.length) * 100 : null;
+};
+
+const trailingInterest = (days) => {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - days);
+  return state.entries
+    .filter(e => (e.autoInt || 0) > 0 && new Date(e.date) >= cutoff)
+    .reduce((s, e) => s + (e.autoInt || 0), 0);
+};
+
+const monthlyInterest = (monthStr) =>
+  state.entries
+    .filter(e => e.date.startsWith(monthStr) && (e.autoInt || 0) > 0)
+    .reduce((s, e) => s + (e.autoInt || 0), 0);
+
+const getAllCats = () => [
+  ...(window._DEFAULT_CATS || []),
+  ...state.customCats,
+];
+
+const getCat = (id) =>
+  getAllCats().find(c => c.id === id) || { icon: '📦', label: '其他' };
+
+const budgetTotals = () => {
+  const totalBudget  = state.budgetItems.reduce((s, i) => s + i.budget, 0);
+  const myPaid       = state.expenses.filter(e => (e.paid_by || 'me') === 'me').reduce((s, e) => s + e.amt, 0);
+  const herPaid      = state.expenses.filter(e => (e.paid_by || 'me') === 'her').reduce((s, e) => s + e.amt, 0);
+  const totalPaid    = myPaid + herPaid;
+  const totalBalance = state.budgetItems.reduce((s, item) => {
+    const paid = state.expenses
+      .filter(e => e.budget_item_id === item.id)
+      .reduce((ss, e) => ss + e.amt, 0);
+    return s + Math.max(0, item.budget - paid);
+  }, 0);
+  const surplus = totalBudget - totalPaid;
+  return { totalBudget, myPaid, herPaid, totalPaid, totalBalance, surplus };
+};
+
+
+// ═══ ui-home.js ═══
+
+// ── ui-home.js ────────────────────────────────────────────────────────────
+// Renders everything on the home screen
+
+  state,
+  fmtRM, shortInitials,
+  getLatestBal, totalBal, blendedEAR, getPlatEAR,
+  totalSpentBy, partnerTotalBal,
+  getTodayEntries,
+
+// ── MAIN RENDER ───────────────────────────────────────────────────────────
+const renderHome = () => {
+  _renderDate();
+  _renderHero();
+  _renderMyProgress();
+  _renderJointCard();
+  _renderBudgetCard();
+  _renderPlatformOverview();
+  _renderPromoAlerts();
+  _renderYieldAlerts();
+};
+
+// ── DATE ──────────────────────────────────────────────────────────────────
+const _renderDate = () => {
+  const el = document.getElementById('today-date');
+  if (el) el.textContent = new Date().toLocaleDateString('zh-MY', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+  });
+};
+
+// ── HERO ──────────────────────────────────────────────────────────────────
+const _renderHero = () => {
+  const total   = totalBal();
+  const ear     = blendedEAR();
+  const daily   = total * ear / 100 / 365;
+  const monthly = total * ear / 100 / 12;
+
+  _set('h-total',   fmtRM(total, 2));
+  _set('h-blended', ear.toFixed(2) + '%');
+  _set('h-daily',   fmtRM(daily, 2));
+  _set('h-monthly', fmtRM(monthly, 0));
+
+  // Today's actual interest (sum of autoInt from today's entries)
+  const todayInt = getTodayEntries().reduce((s, e) => s + (e.autoInt || 0), 0);
+  const tiEl     = document.getElementById('h-today-int');
+  if (tiEl) {
+    if (todayInt > 0) {
+      tiEl.textContent  = '+' + fmtRM(todayInt, 2);
+      tiEl.style.color  = '#FFD700';
+    } else {
+      tiEl.textContent  = '未记录';
+      tiEl.style.color  = 'rgba(255,255,255,.4)';
+    }
+  }
+};
+
+// ── MY PROGRESS ───────────────────────────────────────────────────────────
+const _renderMyProgress = () => {
+  const total    = totalBal();
+  const ear      = blendedEAR();
+  const mySpent  = totalSpentBy('me');
+  const myGoal   = state.settings.my_goal || 50000;
+  const topup    = state.settings.topup   || 2000;
+
+  const trueTotal = Math.min(total + mySpent, myGoal);
+  const truePct   = Math.min(100, myGoal > 0 ? trueTotal / myGoal * 100 : 0);
+  const savPct    = Math.min(100, myGoal > 0 ? total / myGoal * 100 : 0);
+  const sptPct    = Math.max(0, Math.min(truePct - savPct, 100 - savPct));
+  const gap       = Math.max(0, myGoal - trueTotal);
+  const mInt      = total * ear / 100 / 12;
+  const months    = Math.ceil(gap / Math.max(topup + mInt, 1));
+  const eta       = gap <= 0
+    ? '已达标 🎉'
+    : months < 300
+      ? (months < 12
+          ? months + '个月'
+          : Math.floor(months / 12) + '年' + (months % 12 ? months % 12 + '月' : ''))
+      : '—';
+
+  _set('h-my-goal',  fmtRM(myGoal));
+  _set('h-true-pct', truePct.toFixed(1) + '%');
+  _setWidth('h-bar-savings', savPct);
+  _setWidth('h-bar-spent',   sptPct);
+  _set('leg-savings', fmtRM(total));
+  _set('leg-spent',   fmtRM(mySpent));
+  _set('h-true-gap',  fmtRM(gap));
+  _set('h-eta',       eta);
+};
+
+// ── JOINT CARD ────────────────────────────────────────────────────────────
+const _renderJointCard = () => {
+  const total      = totalBal();
+  const mySpent    = totalSpentBy('me');
+  const herSpent   = totalSpentBy('her');
+  const jGoal      = state.settings.joint_goal || 120000;
+  const partBal    = partnerTotalBal();
+
+  const jTrue  = total + mySpent + partBal + herSpent;
+  const jPct   = Math.min(100, jGoal > 0 ? jTrue / jGoal * 100 : 0);
+  const mePct  = Math.min(100, jGoal > 0 ? (total + mySpent)  / jGoal * 100 : 0);
+  const herPct = Math.min(100 - mePct, jGoal > 0 ? (partBal + herSpent) / jGoal * 100 : 0);
+  const jGap   = Math.max(0, jGoal - jTrue);
+
+  _set('j-total',   fmtRM(jTrue));
+  _set('j-goal',    fmtRM(jGoal));
+  _set('j-pct',     jPct.toFixed(1) + '%');
+  _set('j-gap',     fmtRM(jGap));
+  _set('j-me-pct',  mePct.toFixed(0) + '%');
+  _set('j-her-pct', herPct.toFixed(0) + '%');
+  _set('j-me-amt',  fmtRM(total + mySpent));
+  _set('j-her-amt', fmtRM(partBal + herSpent));
+  _setWidth('j-bar-me',  mePct);
+  _setWidth('j-bar-her', herPct);
+};
+
+// ── BUDGET CARD ───────────────────────────────────────────────────────────
+const _renderBudgetCard = () => {
+  const card = document.getElementById('home-budget-card');
+  if (!card) return;
+
+  if (!state.budgetItems.length) {
+    card.style.display = 'none';
+    return;
+  }
+  card.style.display = 'block';
+
+  const tBud  = state.budgetItems.reduce((s, i) => s + i.budget, 0);
+  const myP   = state.expenses.filter(e => (e.paid_by || 'me') === 'me').reduce((s, e) => s + e.amt, 0);
+  const herP  = state.expenses.filter(e => (e.paid_by || 'me') === 'her').reduce((s, e) => s + e.amt, 0);
+  const tP    = myP + herP;
+  const tBal  = state.budgetItems.reduce((s, item) => {
+    const paid = state.expenses
+      .filter(e => e.budget_item_id === item.id)
+      .reduce((ss, e) => ss + e.amt, 0);
+    return s + Math.max(0, item.budget - paid);
+  }, 0);
+  const surp  = tBud - tP;
+  const uPct  = tBud > 0 ? Math.min(100, tP   / tBud * 100) : 0;
+  const mPct  = tBud > 0 ? Math.min(100, myP  / tBud * 100) : 0;
+  const hPct  = Math.min(Math.max(0, uPct - mPct), 100 - mPct);
+
+  _set('hb-total', fmtRM(tBud));
+  _set('hb-pct',   uPct.toFixed(1) + '%');
+  _setWidth('hb-bar-me',  mPct);
+  _setWidth('hb-bar-her', hPct);
+  _set('hb-paid',    fmtRM(tP));
+  _set('hb-balance', fmtRM(tBal));
+
+  const surpEl = document.getElementById('hb-surplus');
+  if (surpEl) {
+    surpEl.textContent = (surp >= 0 ? '' : '-') + fmtRM(Math.abs(surp));
+    surpEl.style.color = surp >= 0 ? 'var(--teal)' : 'var(--red)';
+  }
+};
+
+// ── PLATFORM OVERVIEW ─────────────────────────────────────────────────────
+const _renderPlatformOverview = () => {
+  const el    = document.getElementById('platform-overview');
+  if (!el) return;
+  const total = totalBal();
+
+  if (!state.platforms.length) {
+    el.innerHTML = '<div class="empty-state">还没有平台 — 去设置添加</div>';
+    return;
+  }
+
+  const roleLabel = { primary: '主力', backup: '备用', promo: 'Promo' };
+  const roleClass = { primary: 'role-primary', backup: 'role-backup', promo: 'role-promo' };
+  const liqClass  = { 'T+0': 'b-green', 'T+1': 'b-amber', 'T+2': 'b-amber', locked: 'b-red' };
+
+  el.innerHTML = state.platforms.map(p => {
+    const bal   = getLatestBal(p.id);
+    const ear2  = getPlatEAR(p);
+    const share = total > 0 ? (bal / total * 100) : 0;
+    const earCl = ear2 >= 3.5 ? 'b-green' : ear2 >= 3.0 ? 'b-amber' : 'b-red';
+
+    return `<div class="plat-row">
+      <div class="plat-icon" style="background:${p.bg};color:${p.color}">
+        ${p.short || shortInitials(p.name)}
+      </div>
+      <div style="flex:1;min-width:0">
+        <div class="plat-name">${p.name}</div>
+        <div class="plat-meta">
+          <span class="badge ${roleClass[p.role] || 'b-gray'}">${roleLabel[p.role] || '—'}</span>
+          <span class="badge ${earCl}">${ear2.toFixed(1)}%</span>
+          <span class="badge ${liqClass[p.liquid] || 'b-gray'}">${p.liquid || '—'}</span>
+          <span style="color:var(--muted)">${share.toFixed(0)}%</span>
+        </div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-size:15px;font-weight:800">${bal > 0 ? fmtRM(bal) : '—'}</div>
+      </div>
+    </div>`;
+  }).join('');
+};
+
+// ── PROMO ALERTS ──────────────────────────────────────────────────────────
+const _renderPromoAlerts = () => {
+  const el  = document.getElementById('promo-alerts');
+  if (!el) return;
+  const now = new Date();
+
+  const html = state.promos
+    .filter(pr => {
+      const daysLeft = Math.ceil((new Date(pr.expiry) - now) / 86400000);
+      return daysLeft >= 0 && daysLeft <= 7;
+    })
+    .map(pr => {
+      const daysLeft = Math.ceil((new Date(pr.expiry) - now) / 86400000);
+      const pn = state.platforms.find(x => x.id === pr.platform)?.name || pr.platform;
+      return `<div class="alert alert-purple">
+        <span>⏰</span>
+        <div><strong>${pn} Promo 还有 ${daysLeft} 天到期!</strong>${pr.note ? ' — ' + pr.note : ''}</div>
+      </div>`;
+    })
+    .join('');
+
+  el.innerHTML = html;
+};
+
+// ── YIELD ALERTS ──────────────────────────────────────────────────────────
+const _renderYieldAlerts = () => {
+  const el  = document.getElementById('alerts-section');
+  if (!el) return;
+  const ear = blendedEAR();
+  let html  = '';
+
+  state.platforms.forEach(p => {
+    const e = getPlatEAR(p);
+    if (p.role === 'primary' && e < 3.5) {
+      html += `<div class="alert alert-amber">
+        <span>⚠️</span>
+        <div><strong>${p.name} EAR ${e.toFixed(1)}%</strong> — 主力平台收益下滑，留意新 Promo</div>
+      </div>`;
+    }
+    if (e < 3.0) {
+      html += `<div class="alert alert-red">
+        <span>🚨</span>
+        <div><strong>${p.name} EAR ${e.toFixed(1)}%</strong> — 低于 3%，建议转出优化器资金</div>
+      </div>`;
+    }
+  });
+
+  if (ear >= 3.5) {
+    html += `<div class="alert alert-green">
+      <span>✅</span>
+      <div><strong>综合 EAR ${ear.toFixed(2)}%</strong> — 配置良好</div>
+    </div>`;
+  }
+
+  if (getTodayEntries().length === 0) {
+    html += `<div class="alert alert-blue">
+      <span>📝</span>
+      <div>今天还没记录 — 去<strong>记录</strong>页面更新余额</div>
+    </div>`;
+  }
+
+  el.innerHTML = html;
+};
+
+// ── DOM HELPERS ───────────────────────────────────────────────────────────
+const _set = (id, text) => {
+  const el = document.getElementById(id);
+  if (el) el.textContent = text;
+};
+
+const _setWidth = (id, pct) => {
+  const el = document.getElementById(id);
+  if (el) el.style.width = Math.max(0, Math.min(100, pct)) + '%';
+};
+
+
+// ═══ ui-log.js ═══
+
+// ── ui-log.js ─────────────────────────────────────────────────────────────
+// Log screen: platform grid, balance input, auto-interest, save entry
+
+  state,
+  fmtRM, shortInitials,
+  getLatestBal, getPlatEAR,
+  calcAutoInt, getTodayEntries,
+  todayStr,
+  saveEntry as fsSaveEntry,
+  deleteEntry as fsDeleteEntry,
+  showToast,
+
+// ── MODULE STATE ──────────────────────────────────────────────────────────
+let _selIdx   = 0;   // currently selected platform index
+let _flowDir  = 'in'; // 'in' | 'out'
+
+// ── MAIN RENDER ───────────────────────────────────────────────────────────
+const renderLog = () => {
+  // Guard: if selIdx out of range, reset
+  if (_selIdx >= state.platforms.length) _selIdx = 0;
+
+  _renderGrid();
+  _renderForm();
+  _renderTodayList();
+};
+
+// ── PLATFORM GRID ─────────────────────────────────────────────────────────
+const _renderGrid = () => {
+  const el   = document.getElementById('log-grid');
+  if (!el) return;
+  const done = getTodayEntries().map(e => e.pid);
+
+  if (!state.platforms.length) {
+    el.innerHTML = '<div class="empty-state" style="grid-column:1/-1">去设置添加平台</div>';
+    return;
+  }
+
+  el.innerHTML = state.platforms.map((p, i) => {
+    const bal    = getLatestBal(p.id);
+    const isDone = done.includes(p.id);
+    return `<div class="log-card${i === _selIdx ? ' selected' : ''}" data-idx="${i}">
+      <div style="display:flex;justify-content:space-between">
+        <div class="lc-name" style="color:${p.color}">${p.short || shortInitials(p.name)}</div>
+        ${isDone ? '<span style="font-size:13px">✅</span>' : ''}
+      </div>
+      <div class="lc-sub" style="color:${p.color}">${getPlatEAR(p).toFixed(1)}% · ${p.liquid || '—'}</div>
+      <div class="lc-bal" style="color:${p.color}">${bal > 0 ? fmtRM(bal) : '—'}</div>
+    </div>`;
+  }).join('');
+
+  // Bind click events on each card
+  el.querySelectorAll('.log-card').forEach(card => {
+    card.addEventListener('click', () => {
+      _selIdx = parseInt(card.dataset.idx);
+      _clearInputs();
+      renderLog();
+      document.getElementById('inp-balance')?.focus();
+    });
+  });
+};
+
+// ── FORM (title + auto-int preview) ──────────────────────────────────────
+const _renderForm = () => {
+  if (!state.platforms.length) return;
+  const sp   = state.platforms[_selIdx];
+  const prev = getLatestBal(sp.id);
+
+  const titleEl = document.getElementById('log-form-title');
+  if (titleEl) titleEl.textContent = sp.name;
+
+  const balEl = document.getElementById('inp-balance');
+  if (balEl) balEl.placeholder = prev > 0 ? prev.toFixed(2) : '0.00';
+
+  _updateAutoIntPreview();
+};
+
+// ── AUTO INTEREST PREVIEW ─────────────────────────────────────────────────
+const _updateAutoIntPreview = () => {
+  const previewEl = document.getElementById('auto-int-preview');
+  if (!previewEl) return;
+  if (!state.platforms.length) return;
+
+  const sp     = state.platforms[_selIdx];
+  const newBal = parseFloat(document.getElementById('inp-balance')?.value) || 0;
+  const flow   = parseFloat(document.getElementById('inp-flow')?.value)    || 0;
+
+  if (!newBal) {
+    previewEl.textContent = '';
+    return;
+  }
+
+  const prev = getLatestBal(sp.id);
+  if (!prev) {
+    previewEl.textContent = '（昨日无余额记录，无法自动计算利息）';
+    previewEl.style.color = 'var(--muted)';
+    return;
+  }
+
+  const ai = calcAutoInt(sp.id, newBal, flow, _flowDir);
+  if (ai > 0) {
+    previewEl.textContent = `预计自动计算利息：+${fmtRM(ai, 2)}`;
+    previewEl.style.color = 'var(--teal)';
+  } else {
+    previewEl.textContent = '（余额变动为零或负数，利息计为 0）';
+    previewEl.style.color = 'var(--muted)';
+  }
+};
+
+// ── TODAY'S ENTRIES LIST ──────────────────────────────────────────────────
+const _renderTodayList = () => {
+  const el = document.getElementById('today-logged');
+  if (!el) return;
+  const te = getTodayEntries();
+
+  if (!te.length) {
+    el.innerHTML = '<div class="empty-state">今天还没有记录</div>';
+    return;
+  }
+
+  el.innerHTML = te.map(e => {
+    const pl = state.platforms.find(x => x.id === e.pid)
+               || { name: e.pid, color: 'var(--muted)' };
+    const ai = e.autoInt || 0;
+    return `<div class="hist-row">
+      <div style="color:${pl.color};font-weight:700;font-size:13px;flex:1;line-height:1.3">${pl.name}</div>
+      <div style="font-weight:700;font-size:13px;text-align:right;margin-left:8px">${fmtRM(e.bal, 2)}</div>
+      ${ai > 0
+        ? `<div style="font-weight:800;color:var(--teal-mid);font-size:13px;min-width:72px;text-align:right">+${fmtRM(ai, 2)}</div>`
+        : ''}
+    </div>`;
+  }).join('');
+};
+
+// ── FLOW DIRECTION TOGGLE ─────────────────────────────────────────────────
+const setFlowDir = (dir) => {
+  _flowDir = dir;
+  const inBtn  = document.getElementById('flow-in-btn');
+  const outBtn = document.getElementById('flow-out-btn');
+  if (!inBtn || !outBtn) return;
+
+  if (dir === 'in') {
+    inBtn.style.cssText  = 'padding:4px 10px;border-radius:20px;border:1.5px solid var(--teal);background:var(--teal-light);color:var(--teal);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit';
+    outBtn.style.cssText = 'padding:4px 10px;border-radius:20px;border:1.5px solid var(--border);background:var(--card);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit';
+  } else {
+    outBtn.style.cssText = 'padding:4px 10px;border-radius:20px;border:1.5px solid var(--coral);background:var(--coral-light);color:var(--coral);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit';
+    inBtn.style.cssText  = 'padding:4px 10px;border-radius:20px;border:1.5px solid var(--border);background:var(--card);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit';
+  }
+
+  _updateAutoIntPreview();
+};
+
+// ── SAVE ENTRY ────────────────────────────────────────────────────────────
+const doSaveEntry = async () => {
+  if (!state.platforms.length) {
+    showToast('先去设置页面添加平台');
+    return;
+  }
+
+  const balEl = document.getElementById('inp-balance');
+  const flowEl = document.getElementById('inp-flow');
+  const bal   = parseFloat(balEl?.value);
+
+  if (!bal || bal <= 0) {
+    showToast('请输入有效余额');
+    return;
+  }
+
+  const flow    = parseFloat(flowEl?.value) || 0;
+  const pid     = state.platforms[_selIdx].id;
+  const autoInt = calcAutoInt(pid, bal, flow, _flowDir);
+  const today   = todayStr();
+
+  // Find & delete any existing entry for same platform + today in Firestore
+  const existing = state.entries.filter(e => e.pid === pid && e.date === today);
+  for (const old of existing) {
+    try { await fsDeleteEntry(old.id); } catch {}
+  }
+
+  // Use a stable ID: pid + date (so it always overwrites the same doc)
+  const id = 'e_' + pid + '_' + today;
+
+  const entry = {
+    id,
+    pid,
+    bal,
+    flow,
+    flowDir: _flowDir,
+    autoInt,
+    date: today,
+    ts:   Date.now(),
+  };
+
+  // Update local state
+  state.entries = state.entries.filter(e => !(e.pid === pid && e.date === today));
+  state.entries.push(entry);
+
+  try {
+    await fsSaveEntry(entry);
+    showToast(`✓ 已保存${autoInt > 0 ? ' · 利息 +' + fmtRM(autoInt, 2) : ''}`);
+  } catch (e) {
+    console.error('Save failed:', e);
+    showToast('保存失败，请重试');
+    return;
+  }
+
+  _clearInputs();
+  if (_selIdx < state.platforms.length - 1) _selIdx++;
+  renderLog();
+  document.dispatchEvent(new CustomEvent('wf:refresh'));
+};
+
+// ── SKIP TO NEXT ──────────────────────────────────────────────────────────
+const skipToNext = () => {
+  if (_selIdx < state.platforms.length - 1) {
+    _selIdx++;
+    _clearInputs();
+    renderLog();
+  }
+};
+
+// ── HELPERS ───────────────────────────────────────────────────────────────
+const _clearInputs = () => {
+  const b = document.getElementById('inp-balance');
+  const f = document.getElementById('inp-flow');
+  if (b) b.value = '';
+  if (f) f.value = '';
+  const preview = document.getElementById('auto-int-preview');
+  if (preview) preview.textContent = '';
+};
+
+// ── BIND INPUT LISTENERS (call once from main.js) ─────────────────────────
+const bindLogListeners = () => {
+  // Balance input → update preview
+  document.getElementById('inp-balance')?.addEventListener('input', _updateAutoIntPreview);
+  document.getElementById('inp-flow')?.addEventListener('input',    _updateAutoIntPreview);
+
+  // Flow direction buttons
+  document.querySelectorAll('.flow-btn').forEach(btn => {
+    btn.addEventListener('click', () => setFlowDir(btn.dataset.dir));
+  });
+
+  // Save / Skip buttons
+  document.getElementById('save-entry-btn')?.addEventListener('click', doSaveEntry);
+  document.getElementById('skip-entry-btn')?.addEventListener('click', skipToNext);
+};
+
+
+// ═══ ui-expenses.js ═══
+
+// ── ui-expenses.js ────────────────────────────────────────────────────────
+// Wedding budget planner: overview, budget items, payments, custom categories
+
+  state,
+  fmtRM, getCat, getAllCats,
+  totalSpentBy, budgetTotals,
+  todayStr, showToast,
+  saveBudgetItem  as fsSaveBudgetItem,
+  deleteBudgetItem as fsDeleteBudgetItem,
+  saveExpense      as fsSaveExpense,
+  deleteExpense    as fsDeleteExpense,
+  saveCustomCat    as fsSaveCustomCat,
+  deleteCustomCat  as fsDeleteCustomCat,
+
+
+// ── MODULE STATE ──────────────────────────────────────────────────────────
+let _tab           = 'list';   // 'list' | 'add-item' | 'add-payment'
+let _selCat        = 'venue';
+let _selPaidBy     = 'me';
+let _editingItemId = null;     // null = new item, string = editing existing
+
+// ── MAIN RENDER ───────────────────────────────────────────────────────────
+const renderExpenses = () => {
+  _renderOverview();
+  _renderItemsList();
+};
+
+// ── TAB SWITCHER ──────────────────────────────────────────────────────────
+const setExpTab = (tab) => {
+  _tab = tab;
+
+  // Show/hide tab panels
+  ['list', 'add-item', 'add-payment'].forEach(t => {
+    const el = document.getElementById('exp-tab-' + t);
+    if (el) el.style.display = t === tab ? '' : 'none';
+  });
+
+  // Update seg-ctrl active state
+  const ctrl = document.getElementById('exp-tab-ctrl');
+  ctrl?.querySelectorAll('.seg-btn').forEach((btn, i) => {
+    btn.classList.toggle('active', ['list', 'add-item', 'add-payment'][i] === tab);
+  });
+
+  if (tab === 'add-item')    _renderAddItemForm();
+  if (tab === 'add-payment') _renderPaymentForm();
+};
+
+// ── OVERVIEW CARD ─────────────────────────────────────────────────────────
+const _renderOverview = () => {
+  const { totalBudget, myPaid, herPaid, totalPaid, totalBalance, surplus } = budgetTotals();
+  const usedPct = totalBudget > 0 ? Math.min(100, totalPaid / totalBudget * 100) : 0;
+  const mPct    = totalBudget > 0 ? Math.min(100, myPaid   / totalBudget * 100) : 0;
+  const hPct    = Math.min(Math.max(0, usedPct - mPct), 100 - mPct);
+
+  _set('bud-total',         fmtRM(totalBudget));
+  _set('bud-used-pct',      usedPct.toFixed(1) + '%');
+  _set('bud-me-paid',       fmtRM(myPaid));
+  _set('bud-her-paid',      fmtRM(herPaid));
+  _set('bud-remaining',     fmtRM(totalBalance));
+  _set('bud-total-paid',    fmtRM(totalPaid));
+  _set('bud-total-balance', fmtRM(totalBalance));
+  _setWidth('bud-bar-me',  mPct);
+  _setWidth('bud-bar-her', hPct);
+
+  const surpEl = document.getElementById('bud-surplus');
+  if (surpEl) {
+    surpEl.textContent = (surplus >= 0 ? '' : '-') + fmtRM(Math.abs(surplus));
+    surpEl.style.color = surplus >= 0 ? 'var(--teal)' : 'var(--red)';
+  }
+};
+
+// ── BUDGET ITEMS LIST ─────────────────────────────────────────────────────
+const _renderItemsList = () => {
+  const el = document.getElementById('budget-items-list');
+  if (!el) return;
+
+  if (!state.budgetItems.length) {
+    el.innerHTML = '<div class="empty-state">还没有预算项目<br>点「新增项目」开始规划你的婚礼预算</div>';
+    return;
+  }
+
+  const sorted = [...state.budgetItems].sort((a, b) => a.ts - b.ts);
+
+  el.innerHTML = sorted.map(item => {
+    const cat          = getCat(item.cat);
+    const itemPayments = state.expenses.filter(e => e.budget_item_id === item.id);
+    const itemPaid     = itemPayments.reduce((s, e) => s + e.amt, 0);
+    const itemBalance  = Math.max(0, item.budget - itemPaid);
+    const itemPct      = item.budget > 0 ? Math.min(100, itemPaid / item.budget * 100) : 0;
+    const isOver       = itemPaid > item.budget;
+    const statusCol    = isOver        ? 'var(--red)'
+                       : itemBalance === 0 ? 'var(--teal)'
+                       : 'var(--amber)';
+    const statusLabel  = isOver ? '超支' : itemBalance === 0 ? '已付清' : fmtRM(itemBalance);
+
+    // Last 3 payments
+    const recentPay = [...itemPayments]
+      .sort((a, b) => new Date(b.date) - new Date(a.date))
+      .slice(0, 3)
+      .map(e => {
+        const isHer = (e.paid_by || 'me') === 'her';
+        return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--muted);padding:4px 0;border-top:1px solid var(--border)">
+          <span>${e.date.slice(5)} ${isHer ? '💜' : '💰'} ${e.note || '付款'}</span>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="font-weight:700;color:${isHer ? 'var(--purple)' : 'var(--coral)'}">-${fmtRM(e.amt, 0)}</span>
+            <button data-del-exp="${e.id}" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:0 2px">✕</button>
+          </div>
+        </div>`;
+      }).join('');
+
+    const barColor = isOver ? 'var(--red)' : itemPct >= 100 ? 'var(--teal)' : '#D85A30';
+
+    return `<div class="card" style="margin-bottom:10px;padding:14px" data-item-id="${item.id}">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <div style="width:36px;height:36px;border-radius:9px;background:var(--coral-light);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">${cat.icon}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:800;font-size:15px">${item.name}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">${cat.label}${item.note ? ' · ' + item.note : ''}</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          <button data-edit-item="${item.id}" style="background:var(--teal-light);color:var(--teal);border:none;border-radius:8px;padding:5px 10px;font-size:12px;cursor:pointer;font-weight:700">编辑</button>
+          <button data-del-item="${item.id}" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:2px">✕</button>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px">
+        <span style="color:var(--muted)">预算 <strong style="color:var(--text)">${fmtRM(item.budget)}</strong></span>
+        <span style="color:var(--muted)">已付 <strong style="color:var(--coral)">${fmtRM(itemPaid)}</strong></span>
+        <span style="color:var(--muted)">尾款 <strong style="color:${statusCol}">${statusLabel}</strong></span>
+      </div>
+      <div style="height:6px;background:var(--border);border-radius:20px;overflow:hidden;margin-bottom:${recentPay ? '10px' : '6px'}">
+        <div style="height:100%;width:${itemPct}%;background:${barColor};border-radius:20px;transition:width .4s"></div>
+      </div>
+      ${recentPay}
+      <button data-quick-pay="${item.id}" style="width:100%;margin-top:10px;padding:9px;border-radius:8px;border:1.5px solid var(--coral);background:var(--coral-light);color:var(--coral);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">+ 记录付款</button>
+    </div>`;
+  }).join('');
+
+  // Bind buttons inside the list
+  _bindItemListEvents(el);
+};
+
+const _bindItemListEvents = (el) => {
+  // Edit item
+  el.querySelectorAll('[data-edit-item]').forEach(btn => {
+    btn.addEventListener('click', () => _startEditItem(btn.dataset.editItem));
+  });
+  // Delete item
+  el.querySelectorAll('[data-del-item]').forEach(btn => {
+    btn.addEventListener('click', () => _confirmDeleteItem(btn.dataset.delItem));
+  });
+  // Delete expense record
+  el.querySelectorAll('[data-del-exp]').forEach(btn => {
+    btn.addEventListener('click', () => _confirmDeleteExpense(btn.dataset.delExp));
+  });
+  // Quick pay
+  el.querySelectorAll('[data-quick-pay]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      setExpTab('add-payment');
+      // Pre-select the item in the payment form
+      const sel = document.getElementById('pay-item-sel');
+      if (sel) sel.value = btn.dataset.quickPay;
+      if (!document.getElementById('exp-date').value) {
+        document.getElementById('exp-date').value = todayStr();
+      }
+    });
+  });
+};
+
+// ── ADD / EDIT ITEM FORM ──────────────────────────────────────────────────
+const _renderAddItemForm = () => {
+  _renderCatGrid();
+  _renderCustomCatsList();
+  _updateBudgetPreview();
+
+  // Set default date
+  if (!document.getElementById('exp-date')?.value) {
+    const d = document.getElementById('exp-date');
+    if (d) d.value = todayStr();
+  }
+};
+
+const _startEditItem = (id) => {
+  const item = state.budgetItems.find(i => i.id === id);
+  if (!item) return;
+
+  _editingItemId = id;
+  _selCat = item.cat;
+
+  const nameEl   = document.getElementById('bitem-name');
+  const budgetEl = document.getElementById('bitem-budget');
+  const noteEl   = document.getElementById('bitem-note');
+  const labelEl  = document.getElementById('bitem-form-label');
+  const hiddenEl = document.getElementById('bitem-editing-id');
+
+  if (nameEl)   nameEl.value   = item.name;
+  if (budgetEl) budgetEl.value = item.budget;
+  if (noteEl)   noteEl.value   = item.note || '';
+  if (labelEl)  labelEl.textContent = '编辑预算项目';
+  if (hiddenEl) hiddenEl.value = id;
+
+  setExpTab('add-item');
+  document.getElementById('app')?.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
+const saveBudgetItemUI = async () => {
+  const name   = document.getElementById('bitem-name')?.value.trim();
+  const budget = parseFloat(document.getElementById('bitem-budget')?.value);
+  const note   = document.getElementById('bitem-note')?.value.trim() || '';
+
+  if (!name)          { showToast('请填写项目名称'); return; }
+  if (!budget || budget <= 0) { showToast('请填写有效预算金额'); return; }
+
+  if (_editingItemId) {
+    // Update existing
+    const item = state.budgetItems.find(i => i.id === _editingItemId);
+    if (item) {
+      item.cat    = _selCat;
+      item.name   = name;
+      item.budget = budget;
+      item.note   = note;
+      await fsSaveBudgetItem(item);
+      showToast('✓ 预算项目已更新');
+    }
+    _editingItemId = null;
+  } else {
+    // New item
+    const item = {
+      id:         'bi_' + Date.now(),
+      cat:        _selCat,
+      name,
+      budget,
+      note,
+      createdBy:  state.uid,
+      ts:         Date.now(),
+    };
+    state.budgetItems.push(item);
+    await fsSaveBudgetItem(item);
+    showToast('✓ 预算项目已添加');
+  }
+
+  // Reset form
+  _resetItemForm();
+  setExpTab('list');
+  renderExpenses();
+  document.dispatchEvent(new CustomEvent('wf:refresh'));
+};
+
+const _resetItemForm = () => {
+  ['bitem-name', 'bitem-budget', 'bitem-note'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  const label  = document.getElementById('bitem-form-label');
+  const hidden = document.getElementById('bitem-editing-id');
+  if (label)  label.textContent = '新增预算项目';
+  if (hidden) hidden.value      = '';
+  _editingItemId = null;
+  _selCat = 'venue';
+};
+
+const _confirmDeleteItem = async (id) => {
+  if (!confirm('删除此预算项目？相关付款记录也会一并删除。')) return;
+
+  // Delete related expenses
+  const toDelete = state.expenses.filter(e => e.budget_item_id === id);
+  for (const e of toDelete) await fsDeleteExpense(e.id);
+  state.expenses = state.expenses.filter(e => e.budget_item_id !== id);
+
+  state.budgetItems = state.budgetItems.filter(i => i.id !== id);
+  await fsDeleteBudgetItem(id);
+
+  showToast('已删除');
+  renderExpenses();
+  document.dispatchEvent(new CustomEvent('wf:refresh'));
+};
+
+// ── PAYMENT FORM ──────────────────────────────────────────────────────────
+const _renderPaymentForm = () => {
+  _renderPayItemSelector();
+  if (!document.getElementById('exp-date')?.value) {
+    const d = document.getElementById('exp-date');
+    if (d) d.value = todayStr();
+  }
+  // Ensure paid-by state is reflected
+  _renderPaidByBtns();
+};
+
+const _renderPayItemSelector = () => {
+  const sel = document.getElementById('pay-item-sel');
+  if (!sel) return;
+  if (!state.budgetItems.length) {
+    sel.innerHTML = '<option value="">先新增预算项目</option>';
+    return;
+  }
+  sel.innerHTML = state.budgetItems.map(i => {
+    const cat = getCat(i.cat);
+    return `<option value="${i.id}">${cat.icon} ${i.name} (${fmtRM(i.budget)})</option>`;
+  }).join('');
+};
+
+const setPaidBy = (who) => {
+  _selPaidBy = who;
+  _renderPaidByBtns();
+};
+
+const _renderPaidByBtns = () => {
+  const meBtn  = document.getElementById('pby-me-btn');
+  const herBtn = document.getElementById('pby-her-btn');
+  const hint   = document.getElementById('pby-hint');
+  if (!meBtn || !herBtn) return;
+
+  if (_selPaidBy === 'me') {
+    meBtn.style.cssText  = 'flex:1;padding:12px;border-radius:var(--radius-sm);border:1.5px solid var(--coral);background:var(--coral-light);color:var(--coral);font-size:14px;font-weight:800;cursor:pointer;font-family:inherit';
+    herBtn.style.cssText = 'flex:1;padding:12px;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--card);color:var(--muted);font-size:14px;font-weight:800;cursor:pointer;font-family:inherit';
+    if (hint) { hint.textContent = '✅ 算入我的婚礼进度'; hint.style.color = 'var(--teal)'; }
+  } else {
+    herBtn.style.cssText = 'flex:1;padding:12px;border-radius:var(--radius-sm);border:1.5px solid var(--purple);background:var(--purple-light);color:var(--purple);font-size:14px;font-weight:800;cursor:pointer;font-family:inherit';
+    meBtn.style.cssText  = 'flex:1;padding:12px;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--card);color:var(--muted);font-size:14px;font-weight:800;cursor:pointer;font-family:inherit';
+    if (hint) { hint.textContent = '💜 算入她/他的婚礼进度'; hint.style.color = 'var(--purple)'; }
+  }
+};
+
+const addExpenseUI = async () => {
+  const itemId = document.getElementById('pay-item-sel')?.value;
+  const amt    = parseFloat(document.getElementById('exp-amt')?.value);
+  const date   = document.getElementById('exp-date')?.value || todayStr();
+  const note   = document.getElementById('exp-note')?.value.trim() || '';
+
+  if (!itemId)        { showToast('请选择预算项目'); return; }
+  if (!amt || amt <= 0) { showToast('请填写有效金额'); return; }
+
+  const item = state.budgetItems.find(i => i.id === itemId);
+  const exp  = {
+    id:             'px_' + Date.now(),
+    budget_item_id: itemId,
+    cat:            item?.cat || 'other',
+    name:           item?.name || '付款',
+    amt,
+    date,
+    note,
+    paid_by:        _selPaidBy,
+    recordedBy:     state.uid,
+    ts:             Date.now(),
+  };
+
+  state.expenses.push(exp);
+  await fsSaveExpense(exp);
+  showToast(_selPaidBy === 'me' ? '✓ 已记录（算入我的进度）' : '✓ 已记录（算入她/他的进度）');
+
+  // Reset payment form
+  ['exp-amt', 'exp-note'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+
+  setExpTab('list');
+  renderExpenses();
+  document.dispatchEvent(new CustomEvent('wf:refresh'));
+};
+
+const _confirmDeleteExpense = async (id) => {
+  if (!confirm('删除这笔付款记录？')) return;
+  state.expenses = state.expenses.filter(e => e.id !== id);
+  await fsDeleteExpense(id);
+  renderExpenses();
+  document.dispatchEvent(new CustomEvent('wf:refresh'));
+};
+
+// ── CATEGORY GRID ─────────────────────────────────────────────────────────
+const _renderCatGrid = () => {
+  const el = document.getElementById('cat-grid');
+  if (!el) return;
+  const cats = [
+    ...DEFAULT_CATS,
+    ...state.customCats,
+  ];
+  el.innerHTML = cats.map(c =>
+    `<div class="cat-chip${c.id === _selCat ? ' selected' : ''}" data-cat="${c.id}">
+      ${c.icon} ${c.label}
+    </div>`
+  ).join('');
+
+  el.querySelectorAll('.cat-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      _selCat = chip.dataset.cat;
+      _renderCatGrid();
+      _updateBudgetPreview();
+    });
+  });
+};
+
+// ── CUSTOM CATEGORIES ─────────────────────────────────────────────────────
+const _renderCustomCatsList = () => {
+  const el = document.getElementById('custom-cats-list');
+  if (!el) return;
+
+  if (!state.customCats.length) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:4px 0">还没有自定义类别</div>';
+    return;
+  }
+
+  el.innerHTML = state.customCats.map(c =>
+    `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px">
+      <span>${c.icon}</span>
+      <span style="flex:1">${c.label}</span>
+      <button data-del-cat="${c.id}" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:16px">✕</button>
+    </div>`
+  ).join('');
+
+  el.querySelectorAll('[data-del-cat]').forEach(btn => {
+    btn.addEventListener('click', () => _deleteCustomCat(btn.dataset.delCat));
+  });
+};
+
+const addCustomCatUI = async () => {
+  const nameEl = document.getElementById('new-cat-name');
+  const iconEl = document.getElementById('new-cat-icon');
+  const name   = nameEl?.value.trim();
+  const icon   = iconEl?.value.trim() || '📌';
+
+  if (!name) { showToast('请填写类别名称'); return; }
+
+  const cat = { id: 'c_' + Date.now(), label: name, icon };
+  state.customCats.push(cat);
+  await fsSaveCustomCat(cat);
+
+  if (nameEl) nameEl.value = '';
+  if (iconEl) iconEl.value = '';
+
+  _renderCatGrid();
+  _renderCustomCatsList();
+  showToast('✓ 类别已添加');
+};
+
+const _deleteCustomCat = async (id) => {
+  state.customCats = state.customCats.filter(c => c.id !== id);
+  await fsDeleteCustomCat(id);
+  _renderCatGrid();
+  _renderCustomCatsList();
+};
+
+// ── BUDGET PREVIEW ────────────────────────────────────────────────────────
+const _updateBudgetPreview = () => {
+  const budget    = parseFloat(document.getElementById('bitem-budget')?.value) || 0;
+  const existing  = state.budgetItems.reduce((s, i) => {
+    // Don't count the item being edited
+    if (i.id === _editingItemId) return s;
+    return s + i.budget;
+  }, 0);
+  const newTotal  = existing + budget;
+  const jointGoal = state.settings.joint_goal || 120000;
+  const preview   = document.getElementById('bitem-preview');
+
+  if (preview) {
+    if (budget > 0) {
+      preview.style.display = 'block';
+      preview.textContent   = `加入后总预算：${fmtRM(newTotal)} / ${fmtRM(jointGoal)} 联合目标`;
+    } else {
+      preview.style.display = 'none';
+    }
+  }
+};
+
+// ── BIND LISTENERS (call once from main.js) ───────────────────────────────
+const bindExpensesListeners = () => {
+  // Tab switching
+  document.getElementById('exp-tab-ctrl')?.querySelectorAll('.seg-btn').forEach(btn => {
+    btn.addEventListener('click', () => setExpTab(btn.dataset.tab));
+  });
+
+  // Save budget item
+  document.getElementById('save-bitem-btn')?.addEventListener('click', saveBudgetItemUI);
+
+  // Cancel buttons → back to list
+  document.getElementById('cancel-bitem-btn')?.addEventListener('click',   () => { _resetItemForm(); setExpTab('list'); });
+  document.getElementById('cancel-payment-btn')?.addEventListener('click', () => setExpTab('list'));
+
+  // Paid-by buttons
+  document.querySelectorAll('.pby-btn').forEach(btn => {
+    btn.addEventListener('click', () => setPaidBy(btn.dataset.who));
+  });
+
+  // Add expense
+  document.getElementById('add-expense-btn')?.addEventListener('click', addExpenseUI);
+
+  // Budget preview on amount input
+  document.getElementById('bitem-budget')?.addEventListener('input', _updateBudgetPreview);
+
+  // Custom category add
+  document.getElementById('add-custom-cat-btn')?.addEventListener('click', addCustomCatUI);
+};
+
+// ── DOM HELPERS ───────────────────────────────────────────────────────────
+const _set = (id, text) => {
+  const el = document.getElementById(id);
+  if (el) el.textContent = text;
+};
+
+const _setWidth = (id, pct) => {
+  const el = document.getElementById(id);
+  if (el) el.style.width = Math.max(0, Math.min(100, pct)) + '%';
+};
+
+
+// ═══ ui-analysis.js ═══
+
+// ── ui-analysis.js ────────────────────────────────────────────────────────
+// Analysis screen: EAR trends, trailing interest, decisions, sim, monthly report
+
+  state,
+  fmtRM,
+  totalBal, blendedEAR, getPlatEAR,
+  totalSpentBy, partnerTotalBal,
+  trailingEAR, trailingInterest, monthlyInterest,
+  showToast, saveUserSettings,
+
+// ── MAIN RENDER ───────────────────────────────────────────────────────────
+const renderAnalysis = () => {
+  _renderStatGrid();
+  _renderEarTrend();
+  _renderTrailingStats();
+  _renderDecisionAdvice();
+  _renderSim();
+  _renderMonthlyReport();
+};
+
+// ── STAT GRID (4 boxes) ───────────────────────────────────────────────────
+const _renderStatGrid = () => {
+  const el    = document.getElementById('stat-grid');
+  if (!el) return;
+  const total   = totalBal();
+  const ear     = blendedEAR();
+  const mySpent = totalSpentBy('me');
+
+  el.innerHTML = `
+    <div class="stat-box">
+      <div class="sv" style="color:var(--teal)">${ear.toFixed(2)}%</div>
+      <div class="sl">综合 EAR</div>
+    </div>
+    <div class="stat-box">
+      <div class="sv" style="color:var(--teal)">${fmtRM(total * ear / 100 / 365, 2)}</div>
+      <div class="sl">预计日利息</div>
+    </div>
+    <div class="stat-box">
+      <div class="sv" style="color:var(--teal)">${fmtRM(total * ear / 100 / 12, 0)}</div>
+      <div class="sl">预计月利息</div>
+    </div>
+    <div class="stat-box">
+      <div class="sv" style="color:var(--coral)">${fmtRM(mySpent, 0)}</div>
+      <div class="sl">我已付婚费</div>
+    </div>`;
+};
+
+// ── EAR TREND BARS ────────────────────────────────────────────────────────
+const _renderEarTrend = () => {
+  const el = document.getElementById('ear-trend');
+  if (!el) return;
+
+  if (!state.platforms.length) {
+    el.innerHTML = '<div class="empty-state">还没有平台</div>';
+    return;
+  }
+
+  el.innerHTML = state.platforms.map(p => {
+    const set  = getPlatEAR(p);
+    const t7   = trailingEAR(p.id, 7);
+    const t30  = trailingEAR(p.id, 30);
+    const col  = set >= 3.5 ? 'var(--teal-mid)' : set >= 3.0 ? '#BA7517' : '#A32D2D';
+    const barW = Math.min(set / 6 * 100, 100);
+
+    // Trend chip
+    let chip = '';
+    if (t7 != null && t30 != null) {
+      const diff = t7 - t30;
+      if (diff > 0.1)       chip = `<span class="trend-chip trend-up">↑ ${diff.toFixed(1)}%</span>`;
+      else if (diff < -0.1) chip = `<span class="trend-chip trend-down">↓ ${Math.abs(diff).toFixed(1)}%</span>`;
+      else                  chip = `<span class="trend-chip trend-flat">→ 持平</span>`;
+    }
+
+    // 7-day and 30-day labels
+    const t7Label  = t7  != null ? `<span>7天实际: <strong>${t7.toFixed(2)}%</strong></span>`  : '<span style="color:var(--muted)">7天: 数据不足</span>';
+    const t30Label = t30 != null ? `<span>30天实际: <strong>${t30.toFixed(2)}%</strong></span>` : '<span style="color:var(--muted)">30天: 数据不足</span>';
+
+    return `<div class="ear-bar-row">
+      <div class="ear-bar-top">
+        <span style="font-weight:700">${p.name}</span>
+        <span style="color:${col};font-weight:800">${set.toFixed(1)}% ${chip}</span>
+      </div>
+      <div class="ear-bar-bg">
+        <div class="ear-bar-fill" style="width:${barW}%;background:${col}"></div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:3px;display:flex;gap:12px">
+        ${t7Label}
+        ${t30Label}
+      </div>
+    </div>`;
+  }).join('');
+};
+
+// ── TRAILING STATS (7-day / 30-day actual interest) ───────────────────────
+const _renderTrailingStats = () => {
+  const el = document.getElementById('trailing-stats');
+  if (!el) return;
+  const i7  = trailingInterest(7);
+  const i30 = trailingInterest(30);
+
+  el.innerHTML = `
+    <div class="stat-box">
+      <div class="sv" style="color:var(--purple)">${fmtRM(i7, 2)}</div>
+      <div class="sl">过去 7 天实际利息</div>
+    </div>
+    <div class="stat-box">
+      <div class="sv" style="color:var(--purple)">${fmtRM(i30, 2)}</div>
+      <div class="sl">过去 30 天实际利息</div>
+    </div>`;
+};
+
+// ── DECISION ADVICE ───────────────────────────────────────────────────────
+const _renderDecisionAdvice = () => {
+  const el = document.getElementById('decision-advice');
+  if (!el) return;
+
+  if (!state.platforms.length) {
+    el.innerHTML = '<div class="empty-state">添加平台后自动生成建议</div>';
+    return;
+  }
+
+  const sorted   = [...state.platforms].sort((a, b) => getPlatEAR(b) - getPlatEAR(a));
+  const best     = sorted[0];
+  const worst    = sorted[sorted.length - 1];
+  const earSpread = getPlatEAR(best) - getPlatEAR(worst);
+
+  let html = '';
+
+  // Per-platform tips
+  state.platforms.forEach(p => {
+    const e = getPlatEAR(p);
+    if (p.role === 'primary' && e >= 3.5) {
+      html += _tip('var(--teal-mid)',
+        `✅ <strong>${p.name} ${e.toFixed(1)}%</strong> — 主力平台运行良好，维持 40–55% 配置。`);
+    } else if (p.role === 'primary' && e < 3.5) {
+      html += _tip('#BA7517',
+        `⚠️ <strong>${p.name} ${e.toFixed(1)}%</strong> — 主力平台收益下滑，留意新 Promo 或考虑轮换。`);
+    } else if (p.role === 'backup') {
+      html += _tip('var(--blue)',
+        `🔒 <strong>${p.name} ${e.toFixed(1)}%</strong> — 流动备用，适合紧急资金和短期停泊。`);
+    }
+    if (e < 3.0 && p.role !== 'promo') {
+      html += _tip('#A32D2D',
+        `🚨 <strong>${p.name} EAR ${e.toFixed(1)}%</strong> — 低于 3%，建议转出优化器资金。`);
+    }
+  });
+
+  // General rules
+  html += _tip('var(--teal-mid)',
+    '💍 婚礼储备金 ≥50% 放主力平台，不参与 Promo 轮换，稳定第一。');
+  html += _tip('var(--purple)',
+    '🔄 优化器资金（≤30%）才可追逐 fresh funds Promo，到期前 7 天安排转出。');
+
+  // Spread tip
+  if (earSpread >= 0.5) {
+    html += _tip('var(--teal-mid)',
+      `📈 <strong>${best.name}</strong> 比 <strong>${worst.name}</strong> 高 ${earSpread.toFixed(1)}%，考虑调整仓位以提升综合 EAR。`);
+  }
+
+  el.innerHTML = html;
+};
+
+const _tip = (dotColor, html) =>
+  `<div class="tip-item">
+    <div class="tip-dot" style="background:${dotColor}"></div>
+    <div>${html}</div>
+  </div>`;
+
+// ── SIMULATION ────────────────────────────────────────────────────────────
+const _renderSim = () => {
+  // Pre-fill from settings
+  const goalEl  = document.getElementById('sim-mygoal');
+  const topupEl = document.getElementById('sim-topup');
+  if (goalEl  && !goalEl.value)  goalEl.value  = state.settings.my_goal || 50000;
+  if (topupEl && !topupEl.value) topupEl.value = state.settings.topup   || 2000;
+  _calcSim();
+};
+
+const updateSim = async () => {
+  const myGoal = parseFloat(document.getElementById('sim-mygoal')?.value) || state.settings.my_goal || 50000;
+  const topup  = parseFloat(document.getElementById('sim-topup')?.value)  || state.settings.topup  || 2000;
+
+  // Persist to Firestore
+  state.settings.my_goal = myGoal;
+  state.settings.topup   = topup;
+  await saveUserSettings(state.settings);
+
+  _calcSim();
+  document.dispatchEvent(new CustomEvent('wf:refresh'));
+};
+
+const _calcSim = () => {
+  const el      = document.getElementById('sim-result');
+  if (!el) return;
+
+  const myGoal  = parseFloat(document.getElementById('sim-mygoal')?.value) || state.settings.my_goal || 50000;
+  const topup   = parseFloat(document.getElementById('sim-topup')?.value)  || state.settings.topup  || 2000;
+  const total   = totalBal();
+  const ear     = blendedEAR();
+  const mySpent = totalSpentBy('me');
+  const gap     = Math.max(0, myGoal - total - mySpent);
+  const mthlyInt = total * ear / 100 / 12;
+  const mthlyTot = topup + mthlyInt;
+  const months  = mthlyTot > 0 ? Math.ceil(gap / mthlyTot) : 999;
+  const pct     = Math.min(100, myGoal > 0 ? (total + mySpent) / myGoal * 100 : 0);
+  const yr      = Math.floor(months / 12);
+  const mo      = months % 12;
+
+  if (months >= 999) {
+    el.textContent = '请输入你的目标金额';
+    return;
+  }
+
+  const timeStr = gap <= 0
+    ? '已达标 💍'
+    : (yr > 0 ? yr + '年' : '') + (mo > 0 ? mo + '个月' : '');
+
+  el.innerHTML = `
+    <strong>真实进度：${pct.toFixed(1)}%</strong>
+    (储蓄 ${fmtRM(total)} + 已付 ${fmtRM(mySpent)} = ${fmtRM(total + mySpent)} / ${fmtRM(myGoal)})<br>
+    还差 <strong>${fmtRM(gap)}</strong><br>
+    每月储蓄 ${fmtRM(topup)} + 利息 ${fmtRM(mthlyInt, 0)} = <strong>${fmtRM(mthlyTot, 0)}/月</strong><br>
+    预计 <strong>${timeStr}</strong> 达标`;
+};
+
+// ── MONTHLY REPORT ────────────────────────────────────────────────────────
+const _renderMonthlyReport = () => {
+  const el  = document.getElementById('monthly-report-section');
+  if (!el) return;
+
+  const now = new Date();
+  let html  = '<div class="sec-label">月度报告</div>';
+  let hasData = false;
+
+  for (let m = 0; m < 3; m++) {
+    const d  = new Date(now.getFullYear(), now.getMonth() - m, 1);
+    const mk = d.toISOString().slice(0, 7);   // e.g. "2025-06"
+    const ml = d.toLocaleDateString('zh-MY', { year: 'numeric', month: 'long' });
+
+    const monthEntries = state.entries.filter(e => e.date.startsWith(mk));
+    if (!monthEntries.length && m > 0) continue;
+    hasData = true;
+
+    const mint     = monthlyInterest(mk);
+    const endBal   = monthEntries.length
+      ? monthEntries[monthEntries.length - 1].bal
+      : totalBal();
+    const startBal = monthEntries.length
+      ? monthEntries[0].bal
+      : endBal;
+    const growth   = endBal - startBal;
+    const mySpent  = totalSpentBy('me');
+    const partBal  = partnerTotalBal();
+    const herSpent = totalSpentBy('her');
+
+    const myProg   = Math.min(100, ((endBal + mySpent) / (state.settings.my_goal   || 50000)  * 100)).toFixed(1);
+    const jProg    = Math.min(100, ((endBal + mySpent + partBal + herSpent) / (state.settings.joint_goal || 120000) * 100)).toFixed(1);
+
+    // Best EAR platform this month
+    const bestPlat = state.platforms.length
+      ? [...state.platforms].sort((a, b) => getPlatEAR(b) - getPlatEAR(a))[0].name
+      : '—';
+
+    html += `<div class="report-block">
+      <div class="rb-label">${ml}</div>
+      <div class="report-row"><span>实际利息收入</span>
+        <span class="rv" style="color:${mint > 0 ? 'var(--teal)' : 'var(--muted)'}">
+          ${mint > 0 ? '+' + fmtRM(mint, 2) : '需记录利息才能计算'}
+        </span>
+      </div>
+      <div class="report-row"><span>余额变动</span>
+        <span class="rv" style="color:${growth >= 0 ? 'var(--teal)' : 'var(--red)'}">
+          ${growth >= 0 ? '+' : ''}${fmtRM(growth, 0)}
+        </span>
+      </div>
+      <div class="report-row"><span>我付婚礼开销</span>
+        <span class="rv" style="color:var(--coral)">${fmtRM(mySpent, 0)}</span>
+      </div>
+      <div class="report-row"><span>我的真实进度</span>
+        <span class="rv">${myProg}%</span>
+      </div>
+      <div class="report-row"><span>联合进度</span>
+        <span class="rv">${jProg}%</span>
+      </div>
+      <div class="report-row"><span>本月最高 EAR 平台</span>
+        <span class="rv">${bestPlat}</span>
+      </div>
+    </div>`;
+  }
+
+  if (!hasData) {
+    html += '<div class="empty-state">记录满一个月后自动生成报告</div>';
+  }
+
+  el.innerHTML = html;
+};
+
+// ── BIND LISTENERS (call once from main.js) ───────────────────────────────
+const bindAnalysisListeners = () => {
+  document.getElementById('sim-mygoal')?.addEventListener('input', updateSim);
+  document.getElementById('sim-topup')?.addEventListener('input',  updateSim);
+};
+
+
+// ═══ ui-settings.js ═══
+
+// ── ui-settings.js ────────────────────────────────────────────────────────
+// Settings screen: account, partner, platforms, goals, promos, notifications
+
+  state,
+  fmtRM, shortInitials, getPlatEAR,
+  getLatestBal, todayStr, showToast,
+  savePlatform    as fsSavePlatform,
+  deletePlatform  as fsDeletePlatform,
+  savePromo       as fsSavePromo,
+  deletePromo     as fsDeletePromo,
+  saveUserSettings,
+  connectPartner  as fsConnectPartner,
+  disconnectPartner as fsDisconnectPartner,
+  migrateSoloDataToCouple,
+
+
+// ── MODULE STATE (platform modal) ─────────────────────────────────────────
+let _pmLiquid = 'T+0';
+let _pmRole   = 'primary';
+let _pmColor  = PLAT_COLORS[0];
+
+// ── MAIN RENDER ───────────────────────────────────────────────────────────
+const renderSettings = () => {
+  _renderPlatManageList();
+  _renderGoalInputs();
+  _renderPromoSelector();
+  _renderPromoList();
+  _renderPartnerSection();
+  _renderHistory();
+  _renderNotifStatus();
+};
+
+// ── PLATFORM MANAGE LIST ──────────────────────────────────────────────────
+const _renderPlatManageList = () => {
+  const el = document.getElementById('plat-manage-list');
+  if (!el) return;
+
+  if (!state.platforms.length) {
+    el.innerHTML = '<div class="empty-state" style="margin-bottom:12px">还没有平台</div>';
+    return;
+  }
+
+  const roleLabel = { primary: '主力', backup: '备用', promo: 'Promo' };
+  const liqClass  = { 'T+0': 'b-green', 'T+1': 'b-amber', 'T+2': 'b-amber', locked: 'b-red' };
+  const earClass  = e => e >= 3.5 ? 'b-green' : e >= 3.0 ? 'b-amber' : 'b-red';
+
+  el.innerHTML = state.platforms.map(p => {
+    const bal  = getLatestBal(p.id);
+    const ear2 = getPlatEAR(p);
+    return `<div class="plat-manage-card">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:36px;height:36px;border-radius:9px;background:${p.bg};color:${p.color};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;flex-shrink:0">
+          ${p.short || shortInitials(p.name)}
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:15px;font-weight:800">${p.name}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px;display:flex;gap:8px;flex-wrap:wrap">
+            <span class="badge ${liqClass[p.liquid] || 'b-gray'}">${p.liquid || '—'}</span>
+            <span class="badge ${earClass(ear2)}">${ear2.toFixed(1)}%</span>
+            <span class="badge ${p.role ? 'role-' + p.role : 'b-gray'}">${roleLabel[p.role] || '—'}</span>
+          </div>
+        </div>
+      </div>
+      <div class="pm-actions">
+        <button data-edit-plat="${p.id}" style="background:var(--teal-light);color:var(--teal);border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;flex:1">编辑</button>
+        <div style="flex:1;background:var(--bg);border-radius:8px;padding:8px;text-align:center;font-size:12px;color:var(--muted)">
+          余额 <strong style="color:var(--text)">${bal > 0 ? fmtRM(bal) : '—'}</strong>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  el.querySelectorAll('[data-edit-plat]').forEach(btn => {
+    btn.addEventListener('click', () => openPlatModal(btn.dataset.editPlat));
+  });
+};
+
+// ── GOAL INPUTS ───────────────────────────────────────────────────────────
+const _renderGoalInputs = () => {
+  _setVal('set-joint-goal', state.settings.joint_goal || 120000);
+  _setVal('set-my-goal',    state.settings.my_goal    || 50000);
+  _setVal('set-topup',      state.settings.topup      || 2000);
+};
+
+const saveGoals = async () => {
+  const jg = parseFloat(document.getElementById('set-joint-goal')?.value);
+  const mg = parseFloat(document.getElementById('set-my-goal')?.value);
+  const tp = parseFloat(document.getElementById('set-topup')?.value);
+  if (jg > 0) state.settings.joint_goal = jg;
+  if (mg > 0) state.settings.my_goal    = mg;
+  if (tp > 0) state.settings.topup      = tp;
+  await saveUserSettings(state.settings);
+  showToast('目标已保存 ✓');
+  document.dispatchEvent(new CustomEvent('wf:refresh'));
+};
+
+// ── PROMO PLATFORM SELECTOR ───────────────────────────────────────────────
+const _renderPromoSelector = () => {
+  const sel = document.getElementById('promo-platform');
+  if (!sel) return;
+  const d = new Date(); d.setDate(d.getDate() + 90);
+  if (!document.getElementById('promo-expiry')?.value) {
+    const expEl = document.getElementById('promo-expiry');
+    if (expEl) expEl.value = d.toISOString().slice(0, 10);
+  }
+  sel.innerHTML = state.platforms.map(p =>
+    `<option value="${p.id}">${p.name}</option>`
+  ).join('') + '<option value="other">其他平台</option>';
+};
+
+// ── PROMO LIST ────────────────────────────────────────────────────────────
+const _renderPromoList = () => {
+  const el  = document.getElementById('promo-full-list');
+  if (!el) return;
+  const now = new Date();
+
+  const active  = state.promos.filter(p => new Date(p.expiry) >= now).sort((a, b) => new Date(a.expiry) - new Date(b.expiry));
+  const expired = state.promos.filter(p => new Date(p.expiry) <  now);
+
+  if (!active.length && !expired.length) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:8px 0">还没有 Promo 记录</div>';
+    return;
+  }
+
+  let html = '';
+
+  active.forEach(p => {
+    const dl  = Math.ceil((new Date(p.expiry) - now) / 86400000);
+    const pn  = state.platforms.find(x => x.id === p.platform)?.name || p.platform;
+    const col = dl <= 7 ? 'var(--red)' : dl <= 14 ? 'var(--amber)' : 'var(--teal)';
+    html += `<div class="promo-row">
+      <div class="promo-info">
+        <div class="promo-name">${pn} · ${p.rate}% EAR</div>
+        <div class="promo-detail">${p.note || ''} · 到期 ${p.expiry}</div>
+      </div>
+      <div style="font-size:20px;font-weight:900;color:${col};margin-right:8px;flex-shrink:0">${dl}天</div>
+      <button class="del-btn" data-del-promo="${p.id}">✕</button>
+    </div>`;
+  });
+
+  expired.slice(-2).forEach(p => {
+    const pn = state.platforms.find(x => x.id === p.platform)?.name || '其他';
+    html += `<div class="promo-row" style="opacity:.45">
+      <div class="promo-info">
+        <div class="promo-name">${pn} · ${p.rate}% — 已到期</div>
+      </div>
+      <button class="del-btn" data-del-promo="${p.id}">✕</button>
+    </div>`;
+  });
+
+  el.innerHTML = html;
+  el.querySelectorAll('[data-del-promo]').forEach(btn => {
+    btn.addEventListener('click', () => _deletePromo(btn.dataset.delPromo));
+  });
+};
+
+const addPromo = async () => {
+  const platform = document.getElementById('promo-platform')?.value;
+  const rate     = parseFloat(document.getElementById('promo-rate')?.value);
+  const expiry   = document.getElementById('promo-expiry')?.value;
+  const note     = document.getElementById('promo-note')?.value.trim() || '';
+
+  if (!rate || !expiry) { showToast('请填写利率和到期日'); return; }
+
+  const p = { id: 'pr_' + Date.now(), platform, rate, expiry, note, ts: Date.now() };
+  state.promos.push(p);
+  await fsSavePromo(p);
+  showToast('✓ Promo 已添加');
+
+  ['promo-rate', 'promo-note'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+
+  _renderPromoList();
+  document.dispatchEvent(new CustomEvent('wf:refresh'));
+};
+
+const _deletePromo = async (id) => {
+  state.promos = state.promos.filter(p => p.id !== id);
+  await fsDeletePromo(id);
+  _renderPromoList();
+  document.dispatchEvent(new CustomEvent('wf:refresh'));
+};
+
+// ── PARTNER SECTION ───────────────────────────────────────────────────────
+const _renderPartnerSection = () => {
+  const ps = document.getElementById('partner-section');
+  const pb = document.getElementById('partner-status-badge');
+  if (!ps) return;
+
+  if (state.coupleId && state.partnerUid) {
+    if (pb) pb.innerHTML = '<span class="badge b-green">已连接</span>';
+    ps.innerHTML = `
+      <div style="font-size:13px;color:var(--muted);margin-bottom:10px">
+        已与伴侣连接，婚礼预算数据实时共享。
+      </div>
+      <button id="disconnect-partner-btn" class="btn btn-danger" style="padding:10px">断开连接</button>`;
+    document.getElementById('disconnect-partner-btn')?.addEventListener('click', _disconnectPartner);
+  } else {
+    if (pb) pb.innerHTML = '<span class="badge b-gray">未连接</span>';
+    ps.innerHTML = `
+      <div style="font-size:13px;color:var(--muted);margin-bottom:12px">
+        连接后可共享婚礼预算数据，两人实时同步。
+      </div>
+      <div class="inp-group">
+        <div class="inp-label">你的连接码（发给伴侣）</div>
+        <div style="display:flex;gap:8px">
+          <input class="inp sm" type="text" id="my-uid-display" value="${state.uid || ''}" readonly style="flex:1;font-size:11px;color:var(--muted)">
+          <button id="copy-uid-btn" class="btn-sm" style="background:var(--teal);color:#fff;flex-shrink:0">复制</button>
+        </div>
+      </div>
+      <div class="inp-group">
+        <div class="inp-label">输入伴侣的连接码</div>
+        <input class="inp sm" type="text" id="partner-uid-inp" placeholder="粘贴伴侣发给你的连接码">
+      </div>
+      <button id="connect-partner-btn" class="btn btn-primary" style="padding:12px">连接伴侣</button>`;
+
+    document.getElementById('copy-uid-btn')?.addEventListener('click', () => {
+      navigator.clipboard?.writeText(state.uid || '').then(() => showToast('✓ 连接码已复制'));
+    });
+    document.getElementById('connect-partner-btn')?.addEventListener('click', _connectPartner);
+  }
+};
+
+const _connectPartner = async () => {
+  const partUID = document.getElementById('partner-uid-inp')?.value.trim();
+  if (!partUID || partUID === state.uid) { showToast('请输入有效的伴侣连接码'); return; }
+  try {
+    await fsConnectPartner(partUID);
+    showToast('✅ 连接成功！婚礼预算已共享');
+    renderSettings();
+    document.dispatchEvent(new CustomEvent('wf:refresh'));
+  } catch (e) {
+    showToast('连接失败：' + e.message);
+    console.error(e);
+  }
+};
+
+const _migrateData = async () => {
+  showToast('迁移中...');
+  try {
+    const count = await migrateSoloDataToCouple();
+    if (count > 0) {
+      showToast(`✅ 已迁移 ${count} 条数据到共享空间`);
+    } else {
+      showToast('没有找到需要迁移的旧数据');
+    }
+    document.dispatchEvent(new CustomEvent('wf:refresh'));
+  } catch (e) {
+    showToast('迁移失败：' + e.message);
+  }
+};
+
+const _disconnectPartner = async () => {
+  if (!confirm('断开与伴侣的连接？婚礼预算数据仍会保留，但不再同步。')) return;
+  await fsDisconnectPartner();
+  showToast('已断开连接');
+  renderSettings();
+  document.dispatchEvent(new CustomEvent('wf:refresh'));
+};
+
+// ── HISTORY ───────────────────────────────────────────────────────────────
+const _renderHistory = () => {
+  const el = document.getElementById('history-list');
+  if (!el) return;
+
+  const sorted = [...state.entries].sort((a, b) => b.ts - a.ts).slice(0, 60);
+  if (!sorted.length) {
+    el.innerHTML = '<div class="empty-state">暂无记录</div>';
+    return;
+  }
+
+  el.innerHTML = sorted.map(e => {
+    const pl  = state.platforms.find(x => x.id === e.pid) || { name: e.pid, color: 'var(--muted)', short: '?' };
+    const ai  = e.autoInt || 0;
+    return `<div class="hist-row">
+      <div class="hist-date">${e.date.slice(5).replace('-', '/')}</div>
+      <div style="font-weight:700;color:${pl.color};font-size:12px;min-width:36px">${pl.short || pl.name}</div>
+      <div style="flex:1;font-size:13px;text-align:right">${fmtRM(e.bal, 2)}</div>
+      ${ai > 0 ? `<div style="font-weight:800;color:var(--teal-mid);font-size:13px;min-width:70px;text-align:right">+${fmtRM(ai, 2)}</div>` : ''}
+    </div>`;
+  }).join('');
+};
+
+// ── NOTIFICATION STATUS ───────────────────────────────────────────────────
+const _renderNotifStatus = () => {
+  const statusEl = document.getElementById('notif-status');
+  const btnEl    = document.getElementById('notif-btn');
+  if (!statusEl || !btnEl) return;
+
+  const perm = typeof Notification !== 'undefined'
+    ? Notification.permission
+    : 'unsupported';
+
+  if (perm === 'granted') {
+    statusEl.innerHTML = `
+      ✅ 通知已开启，每晚 8 点提醒记录<br>
+      <span style="color:var(--muted)">如需关闭：iPhone 设置 → Safari → 网站设置 → 通知 → 找到此网址 → 改为「拒绝」</span>`;
+    btnEl.textContent   = '已开启';
+    btnEl.style.opacity = '0.5';
+    btnEl.disabled      = true;
+  } else if (perm === 'denied') {
+    statusEl.innerHTML = `
+      ❌ 通知已被拒绝<br>
+      <span style="color:var(--muted)">如需开启：iPhone 设置 → Safari → 网站设置 → 通知 → 找到此网址 → 改为「允许」</span>`;
+    btnEl.style.display = 'none';
+  } else if (perm === 'unsupported') {
+    statusEl.textContent = '此浏览器不支持通知功能';
+    btnEl.style.display  = 'none';
+  } else {
+    // default / not yet asked
+    statusEl.textContent = '开启后每晚 8 点提醒你记录今日余额';
+    btnEl.textContent    = '开启通知';
+    btnEl.disabled       = false;
+    btnEl.style.opacity  = '1';
+    btnEl.style.display  = '';
+  }
+};
+
+const requestNotification = async () => {
+  if (typeof Notification === 'undefined') { showToast('此浏览器不支持通知'); return; }
+  const perm = await Notification.requestPermission();
+  if (perm === 'granted') {
+    showToast('✅ 通知已开启！');
+    scheduleNotification();
+  } else {
+    showToast('通知被拒绝，请在手机设置里手动开启');
+  }
+  _renderNotifStatus();
+};
+
+const scheduleNotification = () => {
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+  const now    = new Date();
+  const target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 20, 0, 0);
+  if (now >= target) target.setDate(target.getDate() + 1);
+  const ms = target - now;
+  setTimeout(() => {
+    // Only notify if user hasn't recorded today
+    const todayEntries = state.entries.filter(e => e.date === todayStr());
+    if (!todayEntries.length) {
+      new Notification('💍 WedFund 提醒', {
+        body: '今天还没有记录平台余额，快去更新！',
+        icon: 'icons/icon-192.png',
+      });
+    }
+    scheduleNotification(); // reschedule for next day
+  }, ms);
+};
+
+// ── PLATFORM MODAL ────────────────────────────────────────────────────────
+const openPlatModal = (editId) => {
+  // Reset modal state
+  _pmLiquid = 'T+0';
+  _pmRole   = 'primary';
+  _pmColor  = PLAT_COLORS[0];
+
+  ['pm-name', 'pm-short', 'pm-ear'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  document.getElementById('pm-editing-id').value = '';
+  const delBtn = document.getElementById('delete-plat-btn');
+  if (delBtn) delBtn.style.display = 'none';
+  document.getElementById('plat-modal-title').textContent = '添加新平台';
+
+  if (editId) {
+    const p = state.platforms.find(x => x.id === editId);
+    if (!p) return;
+    document.getElementById('pm-name').value  = p.name;
+    document.getElementById('pm-short').value = p.short || '';
+    document.getElementById('pm-ear').value   = getPlatEAR(p);
+    document.getElementById('pm-editing-id').value = editId;
+    if (delBtn) delBtn.style.display = 'block';
+    document.getElementById('plat-modal-title').textContent = '编辑平台';
+    _pmLiquid = p.liquid || 'T+0';
+    _pmRole   = p.role   || 'primary';
+    _pmColor  = PLAT_COLORS.find(c => c.hex === p.color) || PLAT_COLORS[0];
+  }
+
+  _syncModalSegs();
+  _renderColorGrid();
+
+  const modal = document.getElementById('plat-modal');
+  modal.classList.remove('hidden');
+  modal.querySelector('.modal-sheet').scrollTop = 0;
+};
+
+const closePlatModal = () => {
+  document.getElementById('plat-modal').classList.add('hidden');
+};
+
+const setPlatField = (field, val) => {
+  if (field === 'liquid') _pmLiquid = val;
+  else                    _pmRole   = val;
+  _syncModalSegs();
+};
+
+const _syncModalSegs = () => {
+  const liqVals  = ['T+0', 'T+1', 'T+2', 'locked'];
+  const roleVals = ['primary', 'backup', 'promo'];
+
+  document.getElementById('pm-liquid-ctrl')?.querySelectorAll('.seg-btn').forEach((b, i) => {
+    b.classList.toggle('active', liqVals[i] === _pmLiquid);
+  });
+  document.getElementById('pm-role-ctrl')?.querySelectorAll('.seg-btn').forEach((b, i) => {
+    b.classList.toggle('active', roleVals[i] === _pmRole);
+  });
+};
+
+const _renderColorGrid = () => {
+  const el = document.getElementById('pm-color-grid');
+  if (!el) return;
+  el.innerHTML = PLAT_COLORS.map(c =>
+    `<div data-color-id="${c.id}"
+      style="width:34px;height:34px;border-radius:50%;background:${c.hex};cursor:pointer;
+             border:3px solid ${c.id === _pmColor.id ? 'var(--text)' : 'transparent'};
+             transition:border .15s">
+    </div>`
+  ).join('');
+  el.querySelectorAll('[data-color-id]').forEach(dot => {
+    dot.addEventListener('click', () => {
+      _pmColor = PLAT_COLORS.find(c => c.id === dot.dataset.colorId) || PLAT_COLORS[0];
+      _renderColorGrid();
+    });
+  });
+};
+
+const savePlatformUI = async () => {
+  const name   = document.getElementById('pm-name')?.value.trim();
+  const shortR = document.getElementById('pm-short')?.value.trim().toUpperCase();
+  const ear    = parseFloat(document.getElementById('pm-ear')?.value);
+  const editId = document.getElementById('pm-editing-id')?.value;
+
+  if (!name)          { showToast('请填写平台名称'); return; }
+  if (!ear || ear <= 0) { showToast('请填写有效 EAR'); return; }
+
+  const short = shortR || shortInitials(name);
+
+  if (editId) {
+    const idx = state.platforms.findIndex(p => p.id === editId);
+    if (idx >= 0) {
+      state.platforms[idx] = {
+        ...state.platforms[idx],
+        name, short, ear,
+        liquid: _pmLiquid,
+        role:   _pmRole,
+        color:  _pmColor.hex,
+        bg:     _pmColor.bg,
+      };
+      await fsSavePlatform(state.platforms[idx]);
+    }
+  } else {
+    const p = {
+      id:     'p_' + Date.now(),
+      name, short, ear,
+      liquid: _pmLiquid,
+      role:   _pmRole,
+      color:  _pmColor.hex,
+      bg:     _pmColor.bg,
+    };
+    state.platforms.push(p);
+    await fsSavePlatform(p);
+  }
+
+  closePlatModal();
+  showToast(editId ? '✓ 平台已更新' : '✓ 平台已添加');
+  renderSettings();
+  document.dispatchEvent(new CustomEvent('wf:refresh'));
+};
+
+const deletePlatformUI = async () => {
+  const editId = document.getElementById('pm-editing-id')?.value;
+  if (!editId) return;
+  const p = state.platforms.find(x => x.id === editId);
+  if (!confirm(`确定删除「${p?.name}」？该平台的历史记录会保留，但不再显示。`)) return;
+  state.platforms = state.platforms.filter(x => x.id !== editId);
+  await fsDeletePlatform(editId);
+  closePlatModal();
+  showToast('平台已删除');
+  renderSettings();
+  document.dispatchEvent(new CustomEvent('wf:refresh'));
+};
+
+// ── BIND LISTENERS (call once from main.js) ───────────────────────────────
+const bindSettingsListeners = () => {
+  // Static migrate button (always in HTML)
+  document.getElementById('migrate-data-btn')?.addEventListener('click', _migrateData);
+  // Platform modal open/close
+  document.getElementById('add-plat-btn')?.addEventListener('click', () => openPlatModal());
+  document.getElementById('close-plat-modal-btn')?.addEventListener('click', closePlatModal);
+  document.getElementById('cancel-plat-btn')?.addEventListener('click', closePlatModal);
+  document.getElementById('plat-modal')?.addEventListener('click', e => {
+    if (e.target === e.currentTarget) closePlatModal();
+  });
+
+  // Platform modal liquid/role seg btns
+  document.getElementById('pm-liquid-ctrl')?.querySelectorAll('.seg-btn').forEach(btn => {
+    btn.addEventListener('click', () => setPlatField('liquid', btn.dataset.liquid));
+  });
+  document.getElementById('pm-role-ctrl')?.querySelectorAll('.seg-btn').forEach(btn => {
+    btn.addEventListener('click', () => setPlatField('role', btn.dataset.role));
+  });
+
+  // Save / delete platform
+  document.getElementById('save-plat-btn')?.addEventListener('click',   savePlatformUI);
+  document.getElementById('delete-plat-btn')?.addEventListener('click', deletePlatformUI);
+
+  // Goals
+  document.getElementById('save-goals-btn')?.addEventListener('click', saveGoals);
+
+  // Promos
+  document.getElementById('add-promo-btn')?.addEventListener('click', addPromo);
+
+  // Notification
+  document.getElementById('notif-btn')?.addEventListener('click', requestNotification);
+
+  // Settings nav button (gear icon on home)
+  document.getElementById('go-settings-btn')?.addEventListener('click', () => {
+    const navBtns = document.querySelectorAll('.nav-btn');
+    const settingsBtn = [...navBtns].find(b => b.dataset.screen === 'settings');
+    if (settingsBtn) settingsBtn.click();
+  });
+};
+
+// ── DOM HELPERS ───────────────────────────────────────────────────────────
+const _setVal = (id, val) => {
+  const el = document.getElementById(id);
+  if (el) el.value = val;
+};
+
+
+// ═══ ui-inflow.js ═══
+
+// ── ui-inflow.js ──────────────────────────────────────────────────────────
+// Inflow allocation: salary mode, bonus mode, platform advice, promo tip
+
+  state,
+  fmtRM, getPlatEAR,
+
+// ── MODULE STATE ──────────────────────────────────────────────────────────
+let _mode = 'salary'; // 'salary' | 'bonus'
+
+// ── MAIN RENDER ───────────────────────────────────────────────────────────
+const renderInflow = () => {
+  // Pre-fill wedding fixed from settings
+  const wfEl = document.getElementById('inflow-wedding-fixed');
+  if (wfEl && !wfEl.value) wfEl.value = state.settings.topup || 2000;
+  _renderRules();
+  calcInflow();
+};
+
+// ── MODE SWITCH ───────────────────────────────────────────────────────────
+const setInflowMode = (mode) => {
+  _mode = mode;
+
+  document.getElementById('salary-fields').style.display = mode === 'salary' ? '' : 'none';
+  document.getElementById('bonus-fields').style.display  = mode === 'bonus'  ? '' : 'none';
+
+  const labelEl = document.getElementById('inflow-card-label');
+  if (labelEl) labelEl.textContent = mode === 'salary' ? '本月月薪' : '奖金 / 佣金 / 额外收入';
+
+  // Sync seg-ctrl
+  const ctrl = document.getElementById('inflow-mode-ctrl');
+  ctrl?.querySelectorAll('.seg-btn').forEach((btn, i) => {
+    btn.classList.toggle('active', i === (mode === 'salary' ? 0 : 1));
+  });
+
+  _renderRules();
+  calcInflow();
+};
+
+// ── SLIDER SYNC ───────────────────────────────────────────────────────────
+const syncSliders = () => {
+  const ids = ['wedding', 'optimizer', 'personal', 'emergency'];
+  const vals = {};
+  ids.forEach(k => {
+    vals[k] = parseInt(document.getElementById('sl-' + k)?.value || '0');
+  });
+
+  const total = Object.values(vals).reduce((s, v) => s + v, 0);
+  const warn  = document.getElementById('bonus-pct-warning');
+
+  if (warn) {
+    if (total > 100) {
+      warn.style.display    = 'block';
+      warn.style.background = 'var(--red-light)';
+      warn.style.color      = 'var(--red)';
+      warn.textContent      = `⚠ 合计 ${total}%，超过 100%，请调低其中一项`;
+    } else if (total < 100) {
+      warn.style.display    = 'block';
+      warn.style.background = 'var(--amber-light)';
+      warn.style.color      = 'var(--amber)';
+      warn.textContent      = `还有 ${100 - total}% 未分配`;
+    } else {
+      warn.style.display = 'none';
+    }
+  }
+
+  // Update percentage labels
+  const colors = {
+    wedding:   'var(--teal)',
+    optimizer: 'var(--purple)',
+    personal:  'var(--amber)',
+    emergency: 'var(--blue)',
+  };
+  ids.forEach(k => {
+    const el = document.getElementById('b-pct-' + k);
+    if (el) { el.textContent = vals[k] + '%'; el.style.color = colors[k]; }
+  });
+
+  calcInflow();
+};
+
+// ── MAIN CALC ─────────────────────────────────────────────────────────────
+const calcInflow = () => {
+  const amt = parseFloat(document.getElementById('inflow-amt')?.value) || 0;
+  const resultCard = document.getElementById('inflow-result-card');
+  if (!resultCard) return;
+
+  if (amt <= 0) {
+    resultCard.style.display = 'none';
+    return;
+  }
+  resultCard.style.display = 'block';
+
+  const rows       = _mode === 'salary' ? _calcSalary(amt) : _calcBonus(amt);
+  const totalAlloc = rows.reduce((s, r) => s + r.amt, 0);
+
+  _renderResultRows(rows, amt, totalAlloc);
+  _renderPlatAdvice(rows);
+  _renderPromoTip();
+};
+
+// ── SALARY CALC ───────────────────────────────────────────────────────────
+const _calcSalary = (amt) => {
+  const living      = parseFloat(document.getElementById('inflow-living')?.value)        || 0;
+  const weddingFixed= parseFloat(document.getElementById('inflow-wedding-fixed')?.value) || state.settings.topup || 2000;
+
+  const afterLiving  = Math.max(0, amt - living);
+  const weddingActual= Math.min(weddingFixed, afterLiving);
+  const optimizer    = Math.max(0, afterLiving - weddingActual);
+
+  return [
+    { label: '生活开销预留', amt: living,         color: 'var(--muted)',   icon: '🏠', note: '留在银行，不动',              key: 'living'  },
+    { label: '婚礼基金定存', amt: weddingActual,  color: 'var(--teal)',    icon: '💍', note: '转入主力平台，不参与 Promo',  key: 'wedding' },
+    { label: '优化器资金',   amt: optimizer,      color: 'var(--purple)',  icon: '📈', note: '放最高 EAR 平台或追 Promo',  key: 'optimizer'},
+  ];
+};
+
+// ── BONUS CALC ────────────────────────────────────────────────────────────
+const _calcBonus = (amt) => {
+  const pcts = {
+    wedding:   parseInt(document.getElementById('sl-wedding')?.value   || '50') / 100,
+    optimizer: parseInt(document.getElementById('sl-optimizer')?.value || '20') / 100,
+    personal:  parseInt(document.getElementById('sl-personal')?.value  || '20') / 100,
+    emergency: parseInt(document.getElementById('sl-emergency')?.value || '10') / 100,
+  };
+  const total = Object.values(pcts).reduce((s, v) => s + v, 0);
+  const unalloc = Math.max(0, 1 - Math.min(total, 1));
+
+  const rows = [
+    { label: '婚礼储备金', amt: Math.round(amt * pcts.wedding   * 100) / 100, color: 'var(--teal)',   icon: '💍', note: '直接进主力平台，不做 Promo 轮换', key: 'wedding'   },
+    { label: '优化器资金', amt: Math.round(amt * pcts.optimizer * 100) / 100, color: 'var(--purple)', icon: '📈', note: '追最高 EAR 或当前 Promo',          key: 'optimizer' },
+    { label: '自己奖励',   amt: Math.round(amt * pcts.personal  * 100) / 100, color: 'var(--amber)',  icon: '🎉', note: '你努力赚来的，花得心安理得',        key: 'personal'  },
+    { label: '紧急备用',   amt: Math.round(amt * pcts.emergency * 100) / 100, color: 'var(--blue)',   icon: '🛡️', note: '补充备用平台',                       key: 'emergency' },
+  ];
+
+  if (unalloc > 0.001) {
+    rows.push({
+      label: '未分配', amt: Math.round(amt * unalloc * 100) / 100,
+      color: 'var(--muted)', icon: '❓', note: '调整上方百分比至合计 100%', key: 'unalloc',
+    });
+  }
+
+  return rows;
+};
+
+// ── RENDER RESULT ROWS ────────────────────────────────────────────────────
+const _renderResultRows = (rows, totalAmt, totalAlloc) => {
+  const el = document.getElementById('inflow-result-body');
+  if (!el) return;
+
+  el.innerHTML = rows.map(r => `
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+      <div style="width:34px;height:34px;border-radius:9px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">${r.icon}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;font-size:14px">${r.label}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">${r.note}</div>
+      </div>
+      <div style="font-size:18px;font-weight:900;color:${r.color};flex-shrink:0">${fmtRM(r.amt)}</div>
+    </div>`
+  ).join('') + `
+    <div style="display:flex;justify-content:space-between;padding:10px 0;font-size:13px">
+      <span style="color:var(--muted)">合计分配</span>
+      <span style="font-weight:800">${fmtRM(totalAlloc)} / ${fmtRM(totalAmt)}</span>
+    </div>`;
+};
+
+// ── PLATFORM ADVICE ───────────────────────────────────────────────────────
+const _renderPlatAdvice = (rows) => {
+  const el = document.getElementById('inflow-plat-advice');
+  if (!el) return;
+
+  if (!state.platforms.length) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:8px 0">添加平台后自动生成建议</div>';
+    return;
+  }
+
+  const sorted      = [...state.platforms].sort((a, b) => getPlatEAR(b) - getPlatEAR(a));
+  const bestPrimary = state.platforms.filter(p => p.role === 'primary').sort((a, b) => getPlatEAR(b) - getPlatEAR(a))[0];
+  const bestBackup  = state.platforms.filter(p => p.role === 'backup').sort((a, b) => getPlatEAR(b) - getPlatEAR(a))[0];
+  const bestAll     = sorted[0];
+
+  const advice = [];
+
+  // Wedding allocation → best primary
+  const weddingRow = rows.find(r => r.key === 'wedding');
+  if (weddingRow?.amt > 0 && bestPrimary) {
+    advice.push({
+      icon: '💍',
+      text: `婚礼定存 ${fmtRM(weddingRow.amt)} → <strong>${bestPrimary.name}</strong> (${getPlatEAR(bestPrimary).toFixed(1)}%) · 不参与 Promo 轮换`,
+    });
+  }
+
+  // Optimizer → best EAR platform
+  const optRow = rows.find(r => r.key === 'optimizer');
+  if (optRow?.amt > 0 && bestAll) {
+    advice.push({
+      icon: '📈',
+      text: `优化器 ${fmtRM(optRow.amt)} → <strong>${bestAll.name}</strong> (最高 ${getPlatEAR(bestAll).toFixed(1)}%)`,
+    });
+  }
+
+  // Emergency → best backup
+  const emerRow = rows.find(r => r.key === 'emergency');
+  if (emerRow?.amt > 0 && bestBackup) {
+    advice.push({
+      icon: '🛡️',
+      text: `紧急备用 ${fmtRM(emerRow.amt)} → <strong>${bestBackup.name}</strong> (${bestBackup.liquid || '高流动'})`,
+    });
+  }
+
+  el.innerHTML = advice.length
+    ? advice.map(a => `
+        <div style="display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;line-height:1.5">
+          <span style="flex-shrink:0">${a.icon}</span>
+          <span>${a.text}</span>
+        </div>`).join('')
+    : '<div style="color:var(--muted);font-size:13px;padding:8px 0">暂无建议</div>';
+};
+
+// ── PROMO TIP ─────────────────────────────────────────────────────────────
+const _renderPromoTip = () => {
+  const el  = document.getElementById('inflow-promo-tip');
+  if (!el) return;
+
+  const now         = new Date();
+  const activePromos= state.promos
+    .filter(p => new Date(p.expiry) >= now)
+    .sort((a, b) => b.rate - a.rate);
+  const bestPromo   = activePromos[0];
+  const bestPlatEAR = state.platforms.length
+    ? Math.max(...state.platforms.map(p => getPlatEAR(p)))
+    : 0;
+
+  if (bestPromo && bestPromo.rate > bestPlatEAR + 0.3) {
+    const pn       = state.platforms.find(x => x.id === bestPromo.platform)?.name || bestPromo.platform;
+    const daysLeft = Math.ceil((new Date(bestPromo.expiry) - now) / 86400000);
+    el.innerHTML   = `<div class="alert alert-purple" style="margin-top:14px">
+      <span>🎯</span>
+      <div>
+        <strong>${pn} Promo ${bestPromo.rate}%</strong>
+        比最高平台 EAR 高 ${(bestPromo.rate - bestPlatEAR).toFixed(1)}%，还有 ${daysLeft} 天。
+        优化器资金可考虑放这里。
+      </div>
+    </div>`;
+  } else {
+    el.innerHTML = '';
+  }
+};
+
+// ── RULES TEXT ────────────────────────────────────────────────────────────
+const _renderRules = () => {
+  const el = document.getElementById('inflow-rules-body');
+  if (!el) return;
+
+  if (_mode === 'salary') {
+    el.innerHTML = `
+      <strong>月薪分配顺序（固定执行）</strong><br><br>
+      <span style="background:var(--teal);color:#fff;border-radius:50%;display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;font-size:11px;font-weight:800;margin-right:6px">1</span>先扣生活开销，剩余才是可分配金额<br><br>
+      <span style="background:var(--teal);color:#fff;border-radius:50%;display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;font-size:11px;font-weight:800;margin-right:6px">2</span>婚礼基金定存优先转出，金额按每月目标<br><br>
+      <span style="background:var(--teal);color:#fff;border-radius:50%;display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;font-size:11px;font-weight:800;margin-right:6px">3</span>剩余放最高 EAR 平台，或追当月 Promo<br><br>
+      <div style="background:var(--teal-light);border-radius:8px;padding:10px 12px;margin-top:8px;color:var(--teal);font-size:12px">
+        💡 每月固定执行，不需要思考，直接照顺序来
+      </div>`;
+  } else {
+    el.innerHTML = `
+      <strong>奖金分配原则（百分比制）</strong><br><br>
+      💍 <strong>婚礼储备金优先（建议 ≥50%）</strong><br>
+      <span style="color:var(--muted);font-size:12px">奖金是加速达标最好的机会，直接进主力平台锁定</span><br><br>
+      📈 <strong>优化器资金（建议 15–25%）</strong><br>
+      <span style="color:var(--muted);font-size:12px">追最高 EAR 或当前 Promo，接受短期流动限制</span><br><br>
+      🎉 <strong>自己奖励（建议 ≥10%）</strong><br>
+      <span style="color:var(--muted);font-size:12px">你努力赚来的，必须有一部分奖励自己，可持续性更高</span><br><br>
+      🛡️ <strong>紧急备用（建议 10%）</strong><br>
+      <span style="color:var(--muted);font-size:12px">补充备用平台，确保随时有流动资金</span><br><br>
+      <div style="background:var(--amber-light);border-radius:8px;padding:10px 12px;margin-top:4px;color:var(--amber);font-size:12px">
+        ⚠ 奖金金额不固定，百分比分配才能保证每次都有纪律
+      </div>`;
+  }
+};
+
+// ── BIND LISTENERS (call once from main.js) ───────────────────────────────
+const bindInflowListeners = () => {
+  // Mode toggle
+  document.getElementById('inflow-mode-ctrl')?.querySelectorAll('.seg-btn').forEach(btn => {
+    btn.addEventListener('click', () => setInflowMode(btn.dataset.mode));
+  });
+
+  // Salary inputs → recalc
+  ['inflow-amt', 'inflow-living', 'inflow-wedding-fixed'].forEach(id => {
+    document.getElementById(id)?.addEventListener('input', calcInflow);
+  });
+
+  // Bonus sliders → sync + recalc
+  ['sl-wedding', 'sl-optimizer', 'sl-personal', 'sl-emergency'].forEach(id => {
+    document.getElementById(id)?.addEventListener('input', syncSliders);
+  });
+};
+
+
+// ═══ main.js ═══
+
+// ── main.js ───────────────────────────────────────────────────────────────
+// App entry point: Auth, navigation, listeners, global refresh
+
+  signInWithGoogle, signOutUser, onAuthChange,
+  showLoading, showAuth, showApp,
+  DEFAULT_PLATFORMS, DEFAULT_CATS,
+
+  state,
+  stopListeners, startMyListeners,
+  ensureUserDoc,
+  showToast,
+// ── EXPOSE DEFAULT_CATS globally for getAllCats() in data.js ───────────────
+window._DEFAULT_CATS = DEFAULT_CATS;
+
+// ── ACTIVE SCREEN ─────────────────────────────────────────────────────────
+let _activeScreen = 'home';
+
+// ── NAVIGATION ────────────────────────────────────────────────────────────
+const showScreen = (name) => {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const target = document.getElementById('screen-' + name);
+  if (target) target.classList.add('active');
+
+  document.querySelectorAll('.nav-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.screen === name);
+  });
+
+  document.getElementById('app')?.scrollTo({ top: 0 });
+  _activeScreen = name;
+
+  switch (name) {
+    case 'home':     renderHome();                         break;
+    case 'log':      renderLog();                          break;
+    case 'inflow':   renderInflow();                       break;
+    case 'expenses': renderExpenses(); setExpTab('list');  break;
+    case 'analysis': renderAnalysis();                     break;
+    case 'settings': renderSettings();                     break;
+  }
+};
+
+// ── GLOBAL REFRESH ────────────────────────────────────────────────────────
+const onRefresh = () => {
+  renderHome();
+  if (_activeScreen !== 'home') {
+    switch (_activeScreen) {
+      case 'log':      renderLog();      break;
+      case 'inflow':   renderInflow();   break;
+      case 'expenses': renderExpenses(); break;
+      case 'analysis': renderAnalysis(); break;
+      case 'settings': renderSettings(); break;
+    }
+  }
+};
+
+// ── FIRESTORE DATA CALLBACK ───────────────────────────────────────────────
+const onDataUpdate = () => {
+  renderHome();
+  if (_activeScreen !== 'home') onRefresh();
+};
+
+// ── AUTH STATE ────────────────────────────────────────────────────────────
+onAuthChange(async (user) => {
+  if (user) {
+    state.uid = user.uid;
+    showApp(user);
+
+    try {
+      await ensureUserDoc(user);
+    } catch (e) {
+      console.error('ensureUserDoc failed:', e);
+    }
+
+    startMyListeners(onDataUpdate);
+    renderHome();
+    renderSettings();
+    scheduleNotification();
+
+  } else {
+    // Reset all state
+    state.uid              = null;
+    state.coupleId         = null;
+    state.partnerUid       = null;
+    state.platforms        = [...DEFAULT_PLATFORMS];
+    state.entries          = [];
+    state.promos           = [];
+    state.customCats       = [];
+    state.settings         = { my_goal: 50000, joint_goal: 120000, topup: 2000 };
+    state.budgetItems      = [];
+    state.expenses         = [];
+    state.partnerEntries   = [];
+    state.partnerPlatforms = [];
+
+    stopListeners();
+    showAuth();
+  }
+});
+
+// ── BIND NAV ──────────────────────────────────────────────────────────────
+const bindNav = () => {
+  document.querySelectorAll('.nav-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (btn.dataset.screen) showScreen(btn.dataset.screen);
+    });
+  });
+  document.getElementById('go-settings-btn')?.addEventListener('click', () => {
+    showScreen('settings');
+  });
+};
+
+// ── BIND AUTH BUTTONS ─────────────────────────────────────────────────────
+const bindAuth = () => {
+  document.getElementById('google-signin-btn')?.addEventListener('click', async () => {
+    document.getElementById('auth-loading').style.display = 'block';
+    try {
+      await signInWithGoogle();
+    } catch (e) {
+      document.getElementById('auth-loading').style.display = 'none';
+      showToast('登入失败，请重试');
+      console.error('Sign in error:', e);
+    }
+  });
+
+  document.getElementById('signout-btn')?.addEventListener('click', async () => {
+    if (!confirm('确定登出？')) return;
+    stopListeners();
+    await signOutUser();
+  });
+};
+
+// ── DATE ──────────────────────────────────────────────────────────────────
+const setTodayDate = () => {
+  const el = document.getElementById('today-date');
+  if (el) el.textContent = new Date().toLocaleDateString('zh-MY', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+  });
+};
+
+// ── GLOBAL REFRESH EVENT ──────────────────────────────────────────────────
+document.addEventListener('wf:refresh', onRefresh);
+
+// ── SERVICE WORKER ────────────────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(err => {
+    console.warn('SW registration failed:', err);
+  });
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+const init = () => {
+  showLoading();          // ← show spinner while Firebase auth checks
+  setTodayDate();
+  bindNav();
+  bindAuth();
+  bindLogListeners();
+  bindExpensesListeners();
+  bindAnalysisListeners();
+  bindSettingsListeners();
+  bindInflowListeners();
+};
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
+
+
+
+
+</script>
+
+</body>
+</html>
