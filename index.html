@@ -600,12 +600,13 @@ body {
     <div class="card">
       <div class="card-label">连接伴侣账号 <span id="partner-status-badge"></span></div>
       <div id="partner-section"></div>
-      <button id="migrate-data-btn" class="btn btn-primary" style="padding:12px;margin-top:4px">
-        🔄 同步旧预算数据给伴侣
-      </button>
-      <div style="font-size:11px;color:var(--muted);margin-top:6px;margin-bottom:4px">
-        连接伴侣后点此，把你之前的预算数据同步给对方
-      </div>
+      <button id="migrate-data-btn" style="
+        display:flex;align-items:center;justify-content:center;gap:8px;
+        width:100%;padding:11px 16px;margin-top:8px;
+        border-radius:10px;border:1.5px solid var(--teal);
+        background:var(--teal-light);color:var(--teal);
+        font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;
+      ">🔄 同步预算</button>
     </div>
     <div class="sec-label" style="margin-top:0">平台管理</div>
     <div id="plat-manage-list"></div>
@@ -629,7 +630,7 @@ body {
     <div class="card">
       <div class="card-label">通知设置</div>
       <div style="display:flex;align-items:center;justify-content:space-between;font-size:14px">
-        <span>每日记录提醒（晚上8点）</span>
+        <span>每日记录提醒（早上8点）</span>
         <button id="notif-btn" style="padding:8px 16px;border-radius:20px;border:1.5px solid var(--teal);background:var(--teal-light);color:var(--teal);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">开启</button>
       </div>
       <div id="notif-status" style="font-size:12px;color:var(--muted);margin-top:8px"></div>
@@ -2815,7 +2816,7 @@ const _renderNotifStatus = () => {
 
   if (perm === 'granted') {
     statusEl.innerHTML = `
-      ✅ 通知已开启，每晚 8 点提醒记录<br>
+      ✅ 通知已开启，每早 8 点提醒记录<br>
       <span style="color:var(--muted)">如需关闭：iPhone 设置 → Safari → 网站设置 → 通知 → 找到此网址 → 改为「拒绝」</span>`;
     btnEl.textContent   = '已开启';
     btnEl.style.opacity = '0.5';
@@ -2830,7 +2831,7 @@ const _renderNotifStatus = () => {
     btnEl.style.display  = 'none';
   } else {
     // default / not yet asked
-    statusEl.textContent = '开启后每晚 8 点提醒你记录今日余额';
+    statusEl.textContent = '开启后每早 8 点提醒你记录今日余额';
     btnEl.textContent    = '开启通知';
     btnEl.disabled       = false;
     btnEl.style.opacity  = '1';
@@ -2853,7 +2854,7 @@ const requestNotification = async () => {
 const scheduleNotification = () => {
   if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
   const now    = new Date();
-  const target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 20, 0, 0);
+  const target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 8, 0, 0);
   if (now >= target) target.setDate(target.getDate() + 1);
   const ms = target - now;
   setTimeout(() => {
