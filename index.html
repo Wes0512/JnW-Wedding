@@ -600,14 +600,7 @@ body {
     <div class="card">
       <div class="card-label">连接伴侣账号 <span id="partner-status-badge"></span></div>
       <div id="partner-section"></div>
-      <button id="migrate-data-btn" style="
-        display:flex;align-items:center;justify-content:center;gap:8px;
-        width:100%;padding:11px 16px;margin-top:8px;
-        border-radius:10px;border:1.5px solid var(--teal);
-        background:var(--teal-light);color:var(--teal);
-        font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;
-      ">🔄 同步预算</button>
-    </div>
+      <button id="migrate-data-btn" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:11px 16px;margin-top:8px;border-radius:10px;border:1.5px solid var(--teal);background:var(--teal-light);color:var(--teal);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">🔄 同步预算数据</button></div>
     <div class="sec-label" style="margin-top:0">平台管理</div>
     <div id="plat-manage-list"></div>
     <button class="btn btn-primary" id="add-plat-btn" style="margin-bottom:16px">+ 添加新平台</button>
@@ -2863,7 +2856,7 @@ const scheduleNotification = () => {
     if (!todayEntries.length) {
       new Notification('💍 WedFund 提醒', {
         body: '今天还没有记录平台余额，快去更新！',
-        icon: 'icons/icon-192.png',
+        icon: './icon-192.png',
       });
     }
     scheduleNotification(); // reschedule for next day
