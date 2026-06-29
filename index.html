@@ -1651,10 +1651,10 @@ const doSaveEntry = async () => {
 
   const balEl = document.getElementById('inp-balance');
   const flowEl = document.getElementById('inp-flow');
-  const bal   = parseFloat(balEl?.value);
+  const bal = parseFloat(balEl?.value);
 
-  if (!bal || bal <= 0) {
-    showToast('请输入有效余额');
+  if (balEl?.value === '' || balEl?.value === null || isNaN(bal) || bal < 0) {
+    showToast('请输入有效余额（可以是 0）');
     return;
   }
 
