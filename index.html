@@ -1157,10 +1157,16 @@ const calcAutoInt = (pid, newBal, flow, dir) => {
   return Math.max(0, newBal - prev - netFlow);
 };
 
-const totalSpentBy = (who) =>
-  state.expenses
-    .filter(e => (e.paid_by || 'me') === who)
-    .reduce((s, e) => s + e.amt, 0);
+const totalSpentBy = (who) => {
+  const myUid  = state.uid;
+  const herUid = state.partnerUid;
+  return state.expenses.filter(e => {
+    const pb = e.paid_by || 'me';
+    if (who === 'me')  return pb === 'me'  || pb === myUid;
+    if (who === 'her') return pb === 'her' || (herUid && pb === herUid);
+    return false;
+  }).reduce((s, e) => s + e.amt, 0);
+};
 
 const partnerTotalBal = () => {
   if (!state.partnerEntries.length) return 0;
@@ -1200,7 +1206,7 @@ const trailingInterest = (days) => {
 
 const monthlyInterest = (monthStr) =>
   state.entries
-    .filter(e => e.date.startsWith(monthStr) && (e.autoInt || 0) > 0)
+    .filter(e => e.date.startsWith(monthStr))
     .reduce((s, e) => s + (e.autoInt || 0), 0);
 
 const getAllCats = () => [
@@ -1213,8 +1219,8 @@ const getCat = (id) =>
 
 const budgetTotals = () => {
   const totalBudget  = state.budgetItems.reduce((s, i) => s + i.budget, 0);
-  const myPaid       = state.expenses.filter(e => (e.paid_by || 'me') === 'me').reduce((s, e) => s + e.amt, 0);
-  const herPaid      = state.expenses.filter(e => (e.paid_by || 'me') === 'her').reduce((s, e) => s + e.amt, 0);
+  const myPaid       = state.expenses.filter(e => { const pb = e.paid_by||'me'; return pb==='me'||pb===state.uid; }).reduce((s,e)=>s+e.amt,0);
+  const herPaid      = state.expenses.filter(e => { const pb = e.paid_by||'me'; return pb==='her'||(state.partnerUid&&pb===state.partnerUid); }).reduce((s,e)=>s+e.amt,0);
   const totalPaid    = myPaid + herPaid;
   const totalBalance = state.budgetItems.reduce((s, item) => {
     const paid = state.expenses
@@ -1348,8 +1354,8 @@ const _renderBudgetCard = () => {
   card.style.display = 'block';
 
   const tBud  = state.budgetItems.reduce((s, i) => s + i.budget, 0);
-  const myP   = state.expenses.filter(e => (e.paid_by || 'me') === 'me').reduce((s, e) => s + e.amt, 0);
-  const herP  = state.expenses.filter(e => (e.paid_by || 'me') === 'her').reduce((s, e) => s + e.amt, 0);
+  const myP   = state.expenses.filter(e => { const pb = e.paid_by||'me'; return pb==='me'||pb===state.uid; }).reduce((s,e)=>s+e.amt,0);
+  const herP  = state.expenses.filter(e => { const pb = e.paid_by||'me'; return pb==='her'||(state.partnerUid&&pb===state.partnerUid); }).reduce((s,e)=>s+e.amt,0);
   const tP    = myP + herP;
   const tBal  = state.budgetItems.reduce((s, item) => {
     const paid = state.expenses
@@ -1822,7 +1828,7 @@ const _renderItemsList = () => {
       .sort((a, b) => new Date(b.date) - new Date(a.date))
       .slice(0, 3)
       .map(e => {
-        const isHer = (e.paid_by || 'me') === 'her';
+        const isHer = e.paid_by === 'her' || (state.partnerUid && e.paid_by === state.partnerUid) || (e.paid_by !== 'me' && e.paid_by !== state.uid && e.paid_by === 'her');
         return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--muted);padding:4px 0;border-top:1px solid var(--border)">
           <span>${e.date.slice(5)} ${isHer ? '💜' : '💰'} ${e.note || '付款'}</span>
           <div style="display:flex;align-items:center;gap:6px">
@@ -2062,7 +2068,7 @@ const addExpenseUI = async () => {
     amt,
     date,
     note,
-    paid_by:        _selPaidBy,
+    paid_by: _selPaidBy === 'me' ? state.uid : (state.partnerUid || 'her'),
     recordedBy:     state.uid,
     ts:             Date.now(),
   };
@@ -2459,18 +2465,24 @@ const _renderMonthlyReport = () => {
     const mk = d.toISOString().slice(0, 7);   // e.g. "2025-06"
     const ml = d.toLocaleDateString('zh-MY', { year: 'numeric', month: 'long' });
 
-    const monthEntries = state.entries.filter(e => e.date.startsWith(mk));
+    const monthEntries = state.entries
+      .filter(e => e.date.startsWith(mk))
+      .sort((a, b) => a.date.localeCompare(b.date));
     if (!monthEntries.length && m > 0) continue;
     hasData = true;
 
-    const mint     = monthlyInterest(mk);
-    const endBal   = monthEntries.length
-      ? monthEntries[monthEntries.length - 1].bal
-      : totalBal();
-    const startBal = monthEntries.length
-      ? monthEntries[0].bal
-      : endBal;
-    const growth   = endBal - startBal;
+    const mint = monthlyInterest(mk);
+    // Per-platform latest balance = endBal, earliest = startBal
+    const pids = [...new Set(monthEntries.map(e => e.pid))];
+    const endBal = pids.reduce((s, pid) => {
+      const pe = monthEntries.filter(e => e.pid === pid);
+      return s + (pe.length ? pe[pe.length-1].bal : 0);
+    }, 0) || totalBal();
+    const startBal = pids.reduce((s, pid) => {
+      const pe = monthEntries.filter(e => e.pid === pid);
+      return s + (pe.length ? pe[0].bal : 0);
+    }, 0) || endBal;
+    const growth = endBal - startBal;
     const mySpent  = totalSpentBy('me');
     const partBal  = partnerTotalBal();
     const herSpent = totalSpentBy('her');
@@ -2487,7 +2499,7 @@ const _renderMonthlyReport = () => {
       <div class="rb-label">${ml}</div>
       <div class="report-row"><span>实际利息收入</span>
         <span class="rv" style="color:${mint > 0 ? 'var(--teal)' : 'var(--muted)'}">
-          ${mint > 0 ? '+' + fmtRM(mint, 2) : '需记录利息才能计算'}
+          ${mint > 0 ? '+' + fmtRM(mint, 2) : 'RM 0.00'}
         </span>
       </div>
       <div class="report-row"><span>余额变动</span>
