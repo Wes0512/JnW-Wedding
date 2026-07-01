@@ -584,7 +584,8 @@ body {
       <div class="inp-group"><div class="inp-label">每月储蓄 (RM)</div><div class="inp-prefix"><input class="inp sm" type="number" id="sim-topup" inputmode="decimal"></div></div>
       <div id="sim-result" style="background:var(--teal-light);border-radius:var(--radius-sm);padding:13px;font-size:13px;color:var(--teal);line-height:1.65;border:1px solid rgba(15,110,86,.15)">输入目标查看预测</div>
     </div>
-    <div id="monthly-report-section"></div>
+    <div id="daily-interest-section"></div>
+  <div id="monthly-report-section"></div>
   </div>
 
   <!-- SETTINGS -->
@@ -609,6 +610,7 @@ body {
       <div class="set-row"><label>联合总目标</label><div class="rm-prefix"><input class="mini-inp wide" type="number" id="set-joint-goal"></div></div>
       <div class="set-row"><label>我的目标金额</label><div class="rm-prefix"><input class="mini-inp wide" type="number" id="set-my-goal"></div></div>
       <div class="set-row"><label>每月储蓄目标</label><div class="rm-prefix"><input class="mini-inp wide" type="number" id="set-topup"></div></div>
+      <div class="set-row"><label>婚礼日期</label><input class="mini-inp" type="date" id="set-wedding-date" style="width:140px"></div>
       <button class="btn btn-primary" id="save-goals-btn" style="padding:12px;margin-top:4px">保存目标</button>
     </div>
     <div class="card">
@@ -845,6 +847,7 @@ const state = {
   promos:      [],
   customCats:  [],
   settings:    { ...DEFAULT_SETTINGS },
+  weddingDate: null,
 
   budgetItems:      [],
   expenses:         [],
@@ -971,6 +974,7 @@ const ensureUserDoc = async (user) => {
       email:       user.email,
       photoURL:    user.photoURL || '',
       settings:    { ...DEFAULT_SETTINGS },
+  weddingDate: null,
       createdAt:   serverTimestamp(),
     });
     for (const p of DEFAULT_PLATFORMS) {
@@ -1281,6 +1285,45 @@ const _renderHero = () => {
       tiEl.style.color  = 'rgba(255,255,255,.4)';
     }
   }
+
+  // Item 5: Monthly cumulative interest
+  const now2  = new Date();
+  const curMk = `${now2.getFullYear()}-${String(now2.getMonth()+1).padStart(2,'0')}`;
+  const monthInt = monthlyInterest(curMk);
+  const miEl = document.getElementById('h-month-int');
+  if (miEl) {
+    miEl.textContent = monthInt > 0 ? '+' + fmtRM(monthInt, 2) : 'RM 0.00';
+    miEl.style.color = monthInt > 0 ? '#FFD700' : 'rgba(255,255,255,.5)';
+  }
+
+  // Item 6: Monthly savings progress
+  const topup2     = state.settings.topup || 2000;
+  const pids2      = [...new Set(state.entries.map(e => e.pid))];
+  const monthStartBal = pids2.reduce((s, pid) => {
+    const before = state.entries
+      .filter(e => e.pid === pid && e.date < curMk + '-01')
+      .sort((a, b) => a.date.localeCompare(b.date));
+    return s + (before.length ? before[before.length-1].bal : 0);
+  }, 0);
+  const curBal     = totalBal();
+  const monthSaved = Math.max(0, curBal - monthStartBal);
+  const monthPct   = topup2 > 0 ? Math.min(100, monthSaved / topup2 * 100).toFixed(0) : 0;
+  const mpEl = document.getElementById('h-month-progress');
+  if (mpEl) mpEl.textContent = `${fmtRM(monthSaved, 0)} / ${fmtRM(topup2, 0)} (${monthPct}%)`;
+
+  // Item 7: Wedding countdown
+  const wDate    = state.settings.wedding_date;
+  const wCountEl = document.getElementById('h-wedding-countdown');
+  const wDaysEl  = document.getElementById('h-days-left');
+  if (wDate && wCountEl && wDaysEl) {
+    const daysLeft = Math.ceil((new Date(wDate) - now2) / 86400000);
+    if (daysLeft > 0) {
+      wCountEl.style.display = 'block';
+      wDaysEl.textContent    = daysLeft.toLocaleString();
+    } else {
+      wCountEl.style.display = 'none';
+    }
+  }
 };
 
 // ── MY PROGRESS ───────────────────────────────────────────────────────────
@@ -1455,17 +1498,23 @@ const _renderYieldAlerts = () => {
   let html  = '';
 
   state.platforms.forEach(p => {
-    const e = getPlatEAR(p);
-    if (p.role === 'primary' && e < 3.5) {
+    const setE = getPlatEAR(p);
+    const t7   = trailingEAR(p.id, 7);
+    // Use trailing EAR if available, else fall back to set EAR
+    const effE = t7 != null ? t7 : setE;
+
+    if (p.role === 'primary' && effE < 3.5) {
+      const label = t7 != null ? `实际7天 ${t7.toFixed(2)}%` : `设定 ${setE.toFixed(1)}%`;
       html += `<div class="alert alert-amber">
         <span>⚠️</span>
-        <div><strong>${p.name} EAR ${e.toFixed(1)}%</strong> — 主力平台收益下滑，留意新 Promo</div>
+        <div><strong>${p.name} ${label}</strong> — 主力平台收益偏低，留意新 Promo</div>
       </div>`;
     }
-    if (e < 3.0) {
+    if (effE < 3.0) {
+      const label = t7 != null ? `实际7天 ${t7.toFixed(2)}%` : `设定 ${setE.toFixed(1)}%`;
       html += `<div class="alert alert-red">
         <span>🚨</span>
-        <div><strong>${p.name} EAR ${e.toFixed(1)}%</strong> — 低于 3%，建议转出优化器资金</div>
+        <div><strong>${p.name} ${label}</strong> — 低于 3%，建议转出优化器资金</div>
       </div>`;
     }
   });
@@ -2237,13 +2286,111 @@ const _setWidthEx = (id, pct) => {
 
 
 // ── MAIN RENDER ───────────────────────────────────────────────────────────
+// Analysis page month navigator state
+let _analysisMk = (() => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+})();
+
 const renderAnalysis = () => {
   _renderStatGrid();
   _renderEarTrend();
   _renderTrailingStats();
+  _renderDailyInterest();
   _renderDecisionAdvice();
   _renderSim();
   _renderMonthlyReport();
+};
+
+// Item 2: Month navigator
+const _changeAnalysisMonth = (delta) => {
+  const [y, m] = _analysisMk.split('-').map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  _analysisMk = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  _renderDailyInterest();
+  _renderMonthlyReport();
+};
+
+// Items 3+4: Daily interest list + chart
+const _renderDailyInterest = () => {
+  const el = document.getElementById('daily-interest-section');
+  if (!el) return;
+
+  const now = new Date();
+  const curMk = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const mk = _analysisMk;
+  const [y, m] = mk.split('-').map(Number);
+  const monthLabel = new Date(y, m-1, 1).toLocaleDateString('zh-MY', {year:'numeric', month:'long'});
+
+  // Get all dates with entries in this month
+  const monthEntries = state.entries.filter(e => e.date.startsWith(mk));
+  
+  // Group by date, sum autoInt
+  const byDate = {};
+  monthEntries.forEach(e => {
+    if (!byDate[e.date]) byDate[e.date] = 0;
+    byDate[e.date] += (e.autoInt || 0);
+  });
+  const dates = Object.keys(byDate).sort();
+  const totalMint = dates.reduce((s, d) => s + byDate[d], 0);
+
+  // Build bar chart (simple SVG)
+  const maxInt = Math.max(...dates.map(d => byDate[d]), 0.01);
+  const barW = dates.length > 0 ? Math.max(8, Math.min(24, Math.floor(280 / dates.length))) : 16;
+  const chartW = Math.max(280, dates.length * (barW + 3));
+
+  const bars = dates.map((d, i) => {
+    const val = byDate[d];
+    const h   = Math.max(2, Math.round(val / maxInt * 60));
+    const x   = i * (barW + 3);
+    const col = val > 0 ? '#1D9E75' : '#E2E0D8';
+    return `<g>
+      <rect x="${x}" y="${60-h}" width="${barW}" height="${h}" rx="3" fill="${col}"/>
+      ${barW >= 14 ? `<text x="${x + barW/2}" y="80" text-anchor="middle" font-size="8" fill="var(--muted)">${d.slice(8)}</text>` : ''}
+    </g>`;
+  }).join('');
+
+  const chart = dates.length > 0 ? `
+    <div style="overflow-x:auto;margin:10px 0">
+      <svg width="${chartW}" height="90" style="display:block">
+        ${bars}
+      </svg>
+    </div>` : '';
+
+  // Daily list
+  const list = dates.length > 0
+    ? dates.slice().reverse().map(d => {
+        const val = byDate[d];
+        const dayEntries = monthEntries.filter(e => e.date === d && e.autoInt > 0);
+        const detail = dayEntries.map(e => {
+          const pl = state.platforms.find(x => x.id === e.pid);
+          return pl ? `${pl.short||pl.name} +${fmtRM(e.autoInt,2)}` : '';
+        }).filter(Boolean).join(' · ');
+        return `<div class="report-row">
+          <span style="color:var(--muted)">${d.slice(5).replace('-','/')}</span>
+          <div style="text-align:right">
+            <div style="font-weight:800;color:${val>0?'var(--teal)':'var(--muted)'}">${val>0?'+'+fmtRM(val,2):'RM 0.00'}</div>
+            ${detail ? `<div style="font-size:10px;color:var(--muted)">${detail}</div>` : ''}
+          </div>
+        </div>`;
+      }).join('')
+    : '<div class="empty-state">本月没有利息记录</div>';
+
+  el.innerHTML = `
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <button onclick="_changeAnalysisMonth(-1)" style="background:var(--border);border:none;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:16px;font-weight:800;color:var(--text)">‹</button>
+        <div style="text-align:center">
+          <div style="font-size:13px;font-weight:800">${monthLabel}</div>
+          <div style="font-size:11px;color:var(--muted)">本月累计 <strong style="color:var(--teal)">${totalMint>0?'+'+fmtRM(totalMint,2):'RM 0.00'}</strong></div>
+        </div>
+        <button onclick="_changeAnalysisMonth(1)" style="background:var(--border);border:none;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:16px;font-weight:800;color:var(--text)" ${mk>=curMk?'disabled style="opacity:.4"':''}>›</button>
+      </div>
+      <div class="card-label">每日利息趋势</div>
+      ${chart}
+      <div class="card-label" style="margin-top:10px">每日明细</div>
+      ${list}
+    </div>`;
 };
 
 // ── STAT GRID (4 boxes) ───────────────────────────────────────────────────
@@ -2457,18 +2604,20 @@ const _renderMonthlyReport = () => {
   if (!el) return;
 
   const now = new Date();
-  let html  = '<div class="sec-label">月度报告</div>';
+  let html  = '';
   let hasData = false;
 
-  for (let m = 0; m < 3; m++) {
-    const d  = new Date(now.getFullYear(), now.getMonth() - m, 1);
-    const mk = d.toISOString().slice(0, 7);   // e.g. "2025-06"
-    const ml = d.toLocaleDateString('zh-MY', { year: 'numeric', month: 'long' });
+  // Use selected month from navigator
+  const mk = _analysisMk;
+  const [y2, m2] = mk.split('-').map(Number);
+  const d  = new Date(y2, m2-1, 1);
+  const ml = d.toLocaleDateString('zh-MY', { year: 'numeric', month: 'long' });
+  const m  = 0; // single month
 
     const monthEntries = state.entries
       .filter(e => e.date.startsWith(mk))
       .sort((a, b) => a.date.localeCompare(b.date));
-    if (!monthEntries.length && m > 0) continue;
+    if (!monthEntries.length) { html += '<div class="empty-state">本月暂无数据</div>'; hasData = true; }
     hasData = true;
 
     const mint = monthlyInterest(mk);
@@ -2520,13 +2669,12 @@ const _renderMonthlyReport = () => {
         <span class="rv">${bestPlat}</span>
       </div>
     </div>`;
-  }
 
   if (!hasData) {
-    html += '<div class="empty-state">记录满一个月后自动生成报告</div>';
+    html += '<div class="empty-state">本月暂无数据</div>';
   }
 
-  el.innerHTML = html;
+  el.innerHTML = '<div class="card-label">月度报告</div>' + html;
 };
 
 // ── BIND LISTENERS (call once from main.js) ───────────────────────────────
@@ -2607,15 +2755,18 @@ const _renderGoalInputs = () => {
   _setVal('set-joint-goal', state.settings.joint_goal || 120000);
   _setVal('set-my-goal',    state.settings.my_goal    || 50000);
   _setVal('set-topup',      state.settings.topup      || 2000);
+  _setVal('set-wedding-date', state.settings.wedding_date || '');
 };
 
 const saveGoals = async () => {
   const jg = parseFloat(document.getElementById('set-joint-goal')?.value);
   const mg = parseFloat(document.getElementById('set-my-goal')?.value);
   const tp = parseFloat(document.getElementById('set-topup')?.value);
+  const wd = document.getElementById('set-wedding-date')?.value;
   if (jg > 0) state.settings.joint_goal = jg;
   if (mg > 0) state.settings.my_goal    = mg;
   if (tp > 0) state.settings.topup      = tp;
+  if (wd)     state.settings.wedding_date = wd;
   await saveUserSettings(state.settings);
   showToast('目标已保存 ✓');
   document.dispatchEvent(new CustomEvent('wf:refresh'));
