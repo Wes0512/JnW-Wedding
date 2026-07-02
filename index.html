@@ -2383,18 +2383,22 @@ const _renderDailyInterest = () => {
   el.innerHTML = `
     <div class="card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <button onclick="_changeAnalysisMonth(-1)" style="background:var(--border);border:none;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:16px;font-weight:800;color:var(--text)">‹</button>
+        <button id="btn-month-prev" style="background:var(--border);border:none;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:16px;font-weight:800;color:var(--text)">‹</button>
         <div style="text-align:center">
           <div style="font-size:13px;font-weight:800">${monthLabel}</div>
           <div style="font-size:11px;color:var(--muted)">本月累计 <strong style="color:var(--teal)">${totalMint>0?'+'+fmtRM(totalMint,2):'RM 0.00'}</strong></div>
         </div>
-        <button onclick="_changeAnalysisMonth(1)" style="background:var(--border);border:none;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:16px;font-weight:800;color:var(--text)" ${mk>=curMk?'disabled style="opacity:.4"':''}>›</button>
+        <button id="btn-month-next" style="background:var(--border);border:none;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:16px;font-weight:800;color:var(--text);opacity:${mk>=curMk?'.4':'1'}" ${mk>=curMk?'disabled':''}>›</button>
       </div>
       <div class="card-label">每日利息趋势</div>
       ${chart}
       <div class="card-label" style="margin-top:10px">每日明细</div>
       ${list}
     </div>`;
+
+  // Bind nav buttons AFTER innerHTML is set
+  document.getElementById('btn-month-prev')?.addEventListener('click', () => _changeAnalysisMonth(-1));
+  document.getElementById('btn-month-next')?.addEventListener('click', () => _changeAnalysisMonth(1));
 };
 
 // ── STAT GRID (4 boxes) ───────────────────────────────────────────────────
