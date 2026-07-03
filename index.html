@@ -340,7 +340,7 @@ body {
       <div class="hero-label">我的总资产</div>
       <div class="hero-val" id="h-total">RM 0</div>
       <div class="hero-row">
-        <div class="hero-stat"><div class="v" id="h-blended">0.00%</div><div class="l">综合 EAR</div></div>
+        <div class="hero-stat"><div class="v" id="h-blended">0.00%</div><div class="l">综合 % p.a.</div></div>
         <div class="hero-stat"><div class="v" id="h-today-int" style="color:rgba(255,255,255,.4)">—</div><div class="l">今日实际息</div></div>
         <div class="hero-stat"><div class="v" id="h-month-int" style="color:rgba(255,255,255,.5)">RM 0.00</div><div class="l">本月累计息</div></div>
         <div class="hero-stat"><div class="v" id="h-monthly">RM 0</div><div class="l">预计月息</div></div>
@@ -577,9 +577,9 @@ body {
 
   <!-- ANALYSIS -->
   <div id="screen-analysis" class="screen">
-    <div class="page-header"><div><div class="page-title">分析</div><div class="page-sub">EAR 趋势 · 决策建议</div></div></div>
+    <div class="page-header"><div><div class="page-title">分析</div><div class="page-sub">% p.a. 趋势 · 决策建议</div></div></div>
     <div class="stat-grid" id="stat-grid"></div>
-    <div class="card"><div class="card-label">平台 EAR 趋势</div><div id="ear-trend"></div></div>
+    <div class="card"><div class="card-label">平台 % p.a. 趋势</div><div id="ear-trend"></div></div>
     <div class="card"><div class="card-label">Trailing 实际收益</div><div class="stat-grid" id="trailing-stats" style="margin-bottom:0"></div></div>
     <div class="card"><div class="card-label">决策建议</div><div id="decision-advice"></div></div>
     <div class="card">
@@ -589,6 +589,7 @@ body {
       <div id="sim-result" style="background:var(--teal-light);border-radius:var(--radius-sm);padding:13px;font-size:13px;color:var(--teal);line-height:1.65;border:1px solid rgba(15,110,86,.15)">输入目标查看预测</div>
     </div>
     <div id="daily-interest-section"></div>
+  <div id="rebalance-section"></div>
   <div id="monthly-report-section"></div>
   </div>
 
@@ -614,13 +615,14 @@ body {
       <div class="set-row"><label>联合总目标</label><div class="rm-prefix"><input class="mini-inp wide" type="number" id="set-joint-goal"></div></div>
       <div class="set-row"><label>我的目标金额</label><div class="rm-prefix"><input class="mini-inp wide" type="number" id="set-my-goal"></div></div>
       <div class="set-row"><label>每月储蓄目标</label><div class="rm-prefix"><input class="mini-inp wide" type="number" id="set-topup"></div></div>
+      <div class="set-row"><label>应急备用金目标</label><div class="rm-prefix"><input class="mini-inp wide" type="number" id="set-emergency" placeholder="5000"></div></div>
       <div class="set-row"><label>婚礼日期</label><input class="mini-inp" type="date" id="set-wedding-date" style="width:140px"></div>
       <button class="btn btn-primary" id="save-goals-btn" style="padding:12px;margin-top:4px">保存目标</button>
     </div>
     <div class="card">
       <div class="card-label">Promo 管理</div>
       <div class="inp-group" style="margin-top:4px"><div class="inp-label">平台</div><select class="inp sm" id="promo-platform" style="font-size:13px;font-weight:700"></select></div>
-      <div class="inp-group"><div class="inp-label">Promo 利率 (%)</div><input class="inp sm" type="number" id="promo-rate" placeholder="4.5" step="0.1" inputmode="decimal"></div>
+      <div class="inp-group"><div class="inp-label">Promo 利率 % p.a.</div><input class="inp sm" type="number" id="promo-rate" placeholder="4.5" step="0.1" inputmode="decimal"></div>
       <div class="inp-group"><div class="inp-label">到期日</div><input class="inp sm" type="date" id="promo-expiry" style="font-size:14px"></div>
       <div class="inp-group"><div class="inp-label">备注（选填）</div><input class="inp sm" type="text" id="promo-note" placeholder="例：新用户 fresh funds 90天"></div>
       <button class="btn btn-primary" id="add-promo-btn" style="padding:12px">+ 添加 Promo</button>
@@ -633,6 +635,37 @@ body {
         <button id="notif-btn" style="padding:8px 16px;border-radius:20px;border:1.5px solid var(--teal);background:var(--teal-light);color:var(--teal);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">开启</button>
       </div>
       <div id="notif-status" style="font-size:12px;color:var(--muted);margin-top:8px"></div>
+    </div>
+    <div class="card">
+      <div class="card-label">调仓记录</div>
+      <div id="rebalance-log-list"></div>
+      <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px">
+        <div class="card-label">记录新调仓</div>
+        <div class="inp-group" style="margin-top:8px">
+          <div class="inp-label">从哪个平台</div>
+          <select class="inp sm" id="rb-from" style="font-size:14px;font-weight:700"></select>
+        </div>
+        <div class="inp-group">
+          <div class="inp-label">转入哪个平台</div>
+          <select class="inp sm" id="rb-to" style="font-size:14px;font-weight:700"></select>
+        </div>
+        <div class="inp-group">
+          <div class="inp-label">转移金额 (RM)</div>
+          <div class="inp-prefix"><input class="inp sm" type="number" id="rb-amt" placeholder="0.00" inputmode="decimal"></div>
+        </div>
+        <div class="inp-group">
+          <div class="inp-label">状态</div>
+          <div class="seg-ctrl" id="rb-status-ctrl">
+            <button class="seg-btn active" data-status="pending">进行中</button>
+            <button class="seg-btn" data-status="done">已完成</button>
+          </div>
+        </div>
+        <div class="inp-group">
+          <div class="inp-label">备注（选填）</div>
+          <input class="inp sm" type="text" id="rb-note" placeholder="例：Versa Promo 到期转出">
+        </div>
+        <button class="btn btn-primary" id="save-rb-btn" style="padding:12px">✓ 保存调仓记录</button>
+      </div>
     </div>
     <div class="card"><div class="card-label">历史记录（最近 60 条）</div><div id="history-list"></div></div>
   </div>
@@ -648,13 +681,15 @@ body {
     </div>
     <div class="inp-group"><div class="inp-label">平台名称</div><input class="inp sm" type="text" id="pm-name" placeholder="例：Versa、GX Bank FD"></div>
     <div class="inp-group"><div class="inp-label">简称（3–4 字）</div><input class="inp sm" type="text" id="pm-short" placeholder="例：VER" maxlength="4" style="text-transform:uppercase"></div>
-    <div class="inp-group"><div class="inp-label">当前 EAR (%)</div><input class="inp sm" type="number" id="pm-ear" placeholder="3.5" step="0.1" inputmode="decimal"></div>
+    <div class="inp-group"><div class="inp-label">利率 % p.a.</div><input class="inp sm" type="number" id="pm-ear" placeholder="3.50" step="0.1" inputmode="decimal"></div>
     <div class="inp-group"><div class="inp-label">流动性</div>
-      <div class="seg-ctrl" id="pm-liquid-ctrl">
-        <button class="seg-btn active" data-liquid="T+0">T+0</button>
-        <button class="seg-btn"        data-liquid="T+1">T+1</button>
-        <button class="seg-btn"        data-liquid="T+2">T+2</button>
-        <button class="seg-btn"        data-liquid="locked">锁定</button>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px" id="pm-liquid-ctrl">
+        <button class="seg-btn active" data-liquid="T+0" style="flex:1;min-width:60px">T+0</button>
+        <button class="seg-btn" data-liquid="T+1" style="flex:1;min-width:60px">T+1</button>
+        <button class="seg-btn" data-liquid="T+2" style="flex:1;min-width:60px">T+2</button>
+        <button class="seg-btn" data-liquid="T+3" style="flex:1;min-width:60px">T+3</button>
+        <button class="seg-btn" data-liquid="T+5" style="flex:1;min-width:60px">T+5</button>
+        <button class="seg-btn" data-liquid="locked" style="flex:1;min-width:60px">锁定</button>
       </div>
     </div>
     <div class="inp-group"><div class="inp-label">角色</div>
@@ -857,6 +892,7 @@ const state = {
   expenses:         [],
   partnerEntries:   [],
   partnerPlatforms: [],
+  rebalances: [],
 };
 
 let _unsubs = [];
@@ -1526,7 +1562,7 @@ const _renderYieldAlerts = () => {
   if (ear >= 3.5) {
     html += `<div class="alert alert-green">
       <span>✅</span>
-      <div><strong>综合 EAR ${ear.toFixed(2)}%</strong> — 配置良好</div>
+      <div><strong>综合 % p.a. ${ear.toFixed(2)}%</strong> — 配置良好</div>
     </div>`;
   }
 
@@ -2301,6 +2337,7 @@ const renderAnalysis = () => {
   _renderEarTrend();
   _renderTrailingStats();
   _renderDailyInterest();
+  _renderRebalanceAnalysis();
   _renderDecisionAdvice();
   _renderSim();
   _renderMonthlyReport();
@@ -2412,7 +2449,7 @@ const _renderStatGrid = () => {
   el.innerHTML = `
     <div class="stat-box">
       <div class="sv" style="color:var(--teal)">${ear.toFixed(2)}%</div>
-      <div class="sl">综合 EAR</div>
+      <div class="sl">综合 % p.a.</div>
     </div>
     <div class="stat-box">
       <div class="sv" style="color:var(--teal)">${fmtRM(total * ear / 100 / 365, 2)}</div>
@@ -2537,7 +2574,7 @@ const _renderDecisionAdvice = () => {
   // Spread tip
   if (earSpread >= 0.5) {
     html += _tip('var(--teal-mid)',
-      `📈 <strong>${best.name}</strong> 比 <strong>${worst.name}</strong> 高 ${earSpread.toFixed(1)}%，考虑调整仓位以提升综合 EAR。`);
+      `📈 <strong>${best.name}</strong> 比 <strong>${worst.name}</strong> 高 ${earSpread.toFixed(1)}%，考虑调整仓位以提升综合 % p.a.。`);
   }
 
   el.innerHTML = html;
@@ -2709,6 +2746,7 @@ const renderSettings = () => {
   _renderPromoSelector();
   _renderPromoList();
   _renderPartnerSection();
+  _renderRebalanceLog();
   _renderHistory();
   _renderNotifStatus();
 };
@@ -2764,16 +2802,19 @@ const _renderGoalInputs = () => {
   _setVal('set-my-goal',    state.settings.my_goal    || 50000);
   _setVal('set-topup',      state.settings.topup      || 2000);
   _setVal('set-wedding-date', state.settings.wedding_date || '');
+  _setVal('set-emergency', state.settings.emergency_fund || 5000);
 };
 
 const saveGoals = async () => {
   const jg = parseFloat(document.getElementById('set-joint-goal')?.value);
   const mg = parseFloat(document.getElementById('set-my-goal')?.value);
   const tp = parseFloat(document.getElementById('set-topup')?.value);
+  const ef = parseFloat(document.getElementById('set-emergency')?.value);
   const wd = document.getElementById('set-wedding-date')?.value;
   if (jg > 0) state.settings.joint_goal = jg;
   if (mg > 0) state.settings.my_goal    = mg;
   if (tp > 0) state.settings.topup      = tp;
+  if (ef > 0) state.settings.emergency_fund = ef;
   if (wd)     state.settings.wedding_date = wd;
   await saveUserSettings(state.settings);
   showToast('目标已保存 ✓');
@@ -3171,6 +3212,15 @@ const deletePlatformUI = async () => {
 const bindSettingsListeners = () => {
   // Static migrate button (always in HTML)
   document.getElementById('migrate-data-btn')?.addEventListener('click', _migrateData);
+  document.getElementById('save-rb-btn')?.addEventListener('click', saveRebalanceUI);
+  document.getElementById('rb-status-ctrl')?.querySelectorAll('.seg-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      _rbStatus = btn.dataset.status;
+      document.getElementById('rb-status-ctrl')?.querySelectorAll('.seg-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.status === _rbStatus);
+      });
+    });
+  });
   // Platform modal open/close
   document.getElementById('add-plat-btn')?.addEventListener('click', () => openPlatModal());
   document.getElementById('close-plat-modal-btn')?.addEventListener('click', closePlatModal);
@@ -3572,6 +3622,289 @@ const onDataUpdate = () => {
 };
 
 
+
+// ── REBALANCE STATE ──────────────────────────────────────────────────────
+let _rbStatus = 'pending';
+
+// ── REBALANCE FIRESTORE ───────────────────────────────────────────────────
+const rbCol = uid => collection(db, 'users', uid, 'rebalances');
+
+const saveRebalance = async (rb) => {
+  await safeWrite(() => setDoc(_fsDoc(rbCol(state.uid), rb.id), rb));
+};
+
+const deleteRebalance = async (id) => {
+  await fsDel(_fsDoc(rbCol(state.uid), id));
+};
+
+// ── C: REBALANCE ANALYSIS ─────────────────────────────────────────────────
+const _renderRebalanceAnalysis = () => {
+  const el = document.getElementById('rebalance-section');
+  if (!el) return;
+
+  const platforms = state.platforms;
+  if (!platforms.length) { el.innerHTML = ''; return; }
+
+  const emergencyTarget = state.settings.emergency_fund || 5000;
+  const now = new Date();
+
+  // Build platform data rows
+  const rows = platforms.map(p => {
+    const bal      = getLatestBal(p.id);
+    const t7       = trailingEAR(p.id, 7);
+    const t30      = trailingEAR(p.id, 30);
+    const setEAR   = getPlatEAR(p);
+    const effEAR   = t7 != null ? t7 : setEAR;
+
+    // Today's interest
+    const todayI   = getTodayEntries().filter(e => e.pid === p.id)
+                       .reduce((s, e) => s + (e.autoInt || 0), 0);
+    // 7-day avg daily interest
+    const cutoff7  = new Date(); cutoff7.setDate(cutoff7.getDate() - 7);
+    const i7days   = state.entries.filter(e => e.pid === p.id && new Date(e.date) >= cutoff7);
+    const avg7     = i7days.length ? i7days.reduce((s,e)=>s+(e.autoInt||0),0)/7 : 0;
+
+    // Determine status
+    let status, statusColor, statusLabel;
+    const diff = effEAR - setEAR;
+
+    if (p.role === 'backup' && (p.liquid === 'T+0' || p.liquid === 'T+1') && bal >= emergencyTarget * 0.8) {
+      status = 'emergency'; statusColor = 'var(--blue)'; statusLabel = '🛡️ 备用';
+    } else if (diff >= -0.2) {
+      status = 'keep'; statusColor = 'var(--teal)'; statusLabel = '✅ Keep';
+    } else if (diff >= -0.5) {
+      status = 'watch'; statusColor = 'var(--amber)'; statusLabel = '👀 Watch';
+    } else {
+      status = 'exit'; statusColor = 'var(--red)'; statusLabel = '🚪 Exit';
+    }
+
+    // Check active promo
+    const activePromo = state.promos.find(pr => pr.platform === p.id && new Date(pr.expiry) >= now);
+    if (activePromo) {
+      const dl = Math.ceil((new Date(activePromo.expiry) - now) / 86400000);
+      statusLabel = `⏰ Promo ${dl}天`;
+      statusColor = 'var(--purple)';
+    }
+
+    return { p, bal, setEAR, effEAR, t7, t30, todayI, avg7, status, statusColor, statusLabel, activePromo };
+  }).filter(r => r.bal > 0 || r.p.role === 'primary');
+
+  // Calculate rebalance suggestions
+  const suggestions = _calcRebalanceSuggestions(rows, emergencyTarget);
+
+  // Build table
+  const tableRows = rows.map(r => `
+    <div style="display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--border)">
+      <div style="width:32px;height:32px;border-radius:8px;background:${r.p.bg};color:${r.p.color};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;flex-shrink:0">${r.p.short||r.p.name.slice(0,3).toUpperCase()}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:800">${r.p.name}</div>
+        <div style="font-size:10px;color:var(--muted)">${fmtRM(r.bal,0)} · ${r.p.liquid||'—'}</div>
+      </div>
+      <div style="text-align:right;min-width:60px">
+        <div style="font-size:11px;font-weight:800;color:${r.t7!=null?'var(--teal)':'var(--muted)'}">${r.t7!=null?r.t7.toFixed(2)+'%':r.setEAR.toFixed(2)+'%'}</div>
+        <div style="font-size:9px;color:var(--muted)">${r.t7!=null?'实际7天':'设定'} p.a.</div>
+      </div>
+      <div style="min-width:70px;text-align:right">
+        <div style="font-size:11px;font-weight:800;color:${r.todayI>0?'var(--teal)':'var(--muted)'}">${r.todayI>0?'+'+fmtRM(r.todayI,2):'—'}</div>
+        <div style="font-size:9px;color:var(--muted)">今日息</div>
+      </div>
+      <div style="min-width:55px;text-align:center">
+        <span style="font-size:10px;font-weight:700;color:${r.statusColor}">${r.statusLabel}</span>
+      </div>
+    </div>`).join('');
+
+  // Build suggestions
+  const suggHtml = suggestions.length
+    ? suggestions.map(s => `
+        <div style="display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--border);font-size:12px;line-height:1.55">
+          <span style="flex-shrink:0">${s.icon}</span>
+          <div>
+            <div style="font-weight:700">${s.title}</div>
+            <div style="color:var(--muted);margin-top:2px">${s.desc}</div>
+            ${s.amount ? `<div style="color:var(--teal);font-weight:700;margin-top:2px">建议转移：${fmtRM(s.amount,0)}</div>` : ''}
+            ${s.gain ? `<div style="color:var(--muted);font-size:11px">年多收：+${fmtRM(s.gain,0)}</div>` : ''}
+          </div>
+        </div>`).join('')
+    : '<div style="color:var(--muted);font-size:13px;padding:8px 0">✅ 配置良好，暂无调仓建议</div>';
+
+  el.innerHTML = `
+    <div class="card">
+      <div class="card-label">📊 平台调仓分析</div>
+      ${tableRows}
+    </div>
+    <div class="card">
+      <div class="card-label">💡 调仓建议</div>
+      ${suggHtml}
+    </div>`;
+};
+
+const _calcRebalanceSuggestions = (rows, emergencyTarget) => {
+  const suggestions = [];
+  const now = new Date();
+
+  // Sort by effective EAR desc
+  const sorted = [...rows].sort((a, b) => b.effEAR - a.effEAR);
+  const best   = sorted[0];
+
+  // Emergency fund check
+  const emergencyPlatforms = rows.filter(r =>
+    r.p.liquid === 'T+0' || r.p.liquid === 'T+1'
+  );
+  const emergencyBal = emergencyPlatforms.reduce((s, r) => s + r.bal, 0);
+
+  if (emergencyBal < emergencyTarget) {
+    const needed = emergencyTarget - emergencyBal;
+    const source = rows.filter(r => r.p.liquid !== 'T+0' && r.p.liquid !== 'T+1' && r.bal > needed)
+      .sort((a, b) => a.effEAR - b.effEAR)[0];
+    suggestions.push({
+      icon: '🛡️',
+      title: '应急备用金不足',
+      desc: `建议从 ${source?.p.name || '主力平台'} 转入 T+0/T+1 平台`,
+      amount: needed,
+      gain: null,
+    });
+  }
+
+  // Promo expiring soon
+  rows.forEach(r => {
+    if (r.activePromo) {
+      const dl = Math.ceil((new Date(r.activePromo.expiry) - now) / 86400000);
+      if (dl <= 14) {
+        const gain = r.bal * (best.setEAR - getPlatEAR(r.p)) / 100;
+        suggestions.push({
+          icon: '⏰',
+          title: `${r.p.name} Promo 还有 ${dl} 天到期`,
+          desc: `到期后建议转入 ${best.p.name}（${best.setEAR.toFixed(2)}% p.a.）`,
+          amount: r.bal,
+          gain: Math.max(0, gain),
+        });
+      }
+    }
+  });
+
+  // Low EAR platforms - suggest moving to best
+  rows.forEach(r => {
+    if (r.status === 'exit' && r.bal > 1000 && !r.activePromo) {
+      const gain = r.bal * (best.effEAR - r.effEAR) / 100;
+      suggestions.push({
+        icon: '🚪',
+        title: `${r.p.name} 实际收益偏低`,
+        desc: `建议转入 ${best.p.name}（高 ${(best.effEAR - r.effEAR).toFixed(2)}% p.a.）`,
+        amount: r.bal,
+        gain: Math.max(0, gain),
+      });
+    }
+  });
+
+  // Concentration suggestion - put more in best platform
+  const nonEmergencyBal = rows
+    .filter(r => r.p.liquid !== 'T+0' && r.p.liquid !== 'T+1')
+    .reduce((s, r) => s + r.bal, 0);
+  const bestPlatBal = best?.bal || 0;
+  const bestPlatPct = nonEmergencyBal > 0 ? bestPlatBal / nonEmergencyBal * 100 : 0;
+
+  if (best && bestPlatPct < 50 && !best.activePromo) {
+    suggestions.push({
+      icon: '📈',
+      title: `加码 ${best.p.name}（最高 ${best.setEAR.toFixed(2)}% p.a.）`,
+      desc: `目前只占非应急资金 ${bestPlatPct.toFixed(0)}%，建议提高至 50-60%`,
+      amount: null,
+      gain: null,
+    });
+  }
+
+  return suggestions;
+};
+
+// ── D: REBALANCE LOG ──────────────────────────────────────────────────────
+const _renderRebalanceLog = () => {
+  const el = document.getElementById('rebalance-log-list');
+  if (!el) return;
+
+  // Populate selectors
+  const fromSel = document.getElementById('rb-from');
+  const toSel   = document.getElementById('rb-to');
+  if (fromSel && toSel) {
+    const opts = state.platforms.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+    fromSel.innerHTML = opts;
+    toSel.innerHTML   = opts;
+  }
+
+  const logs = [...(state.rebalances || [])].sort((a, b) => b.ts - a.ts).slice(0, 20);
+  if (!logs.length) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:8px 0">暂无调仓记录</div>';
+    return;
+  }
+
+  el.innerHTML = logs.map(rb => {
+    const fromP = state.platforms.find(p => p.id === rb.from);
+    const toP   = state.platforms.find(p => p.id === rb.to);
+    const isPending = rb.status === 'pending';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px">
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700">${fromP?.name||rb.from} → ${toP?.name||rb.to}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">${rb.date} · ${rb.note||''}</div>
+        <div style="margin-top:4px">
+          <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;background:${isPending?'var(--amber-light)':'var(--teal-light)'};color:${isPending?'var(--amber)':'var(--teal)'}">
+            ${isPending?'⏳ 进行中':'✅ 已完成'}
+          </span>
+        </div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-weight:800;font-size:15px">${fmtRM(rb.amt,0)}</div>
+        ${isPending?`<button data-rb-done="${rb.id}" style="font-size:11px;font-weight:700;background:var(--teal-light);color:var(--teal);border:none;border-radius:8px;padding:4px 10px;cursor:pointer;margin-top:4px">标记完成</button>`:''}
+      </div>
+      <button data-rb-del="${rb.id}" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;flex-shrink:0">✕</button>
+    </div>`;
+  }).join('');
+
+  // Bind buttons
+  el.querySelectorAll('[data-rb-done]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const rb = state.rebalances.find(r => r.id === btn.dataset.rbDone);
+      if (rb) { rb.status = 'done'; await saveRebalance(rb); _renderRebalanceLog(); }
+    });
+  });
+  el.querySelectorAll('[data-rb-del]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('删除此调仓记录？')) return;
+      state.rebalances = state.rebalances.filter(r => r.id !== btn.dataset.rbDel);
+      await deleteRebalance(btn.dataset.rbDel);
+      _renderRebalanceLog();
+    });
+  });
+};
+
+const saveRebalanceUI = async () => {
+  const from = document.getElementById('rb-from')?.value;
+  const to   = document.getElementById('rb-to')?.value;
+  const amt  = parseFloat(document.getElementById('rb-amt')?.value);
+  const note = document.getElementById('rb-note')?.value.trim() || '';
+
+  if (!from || !to)       { showToast('请选择平台'); return; }
+  if (from === to)         { showToast('转出和转入不能是同一个平台'); return; }
+  if (!amt || amt <= 0)    { showToast('请填写转移金额'); return; }
+
+  const rb = {
+    id:     'rb_' + Date.now(),
+    from, to, amt, note,
+    status: _rbStatus,
+    date:   todayStr(),
+    ts:     Date.now(),
+  };
+
+  if (!state.rebalances) state.rebalances = [];
+  state.rebalances.push(rb);
+  await saveRebalance(rb);
+
+  ['rb-amt', 'rb-note'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+
+  showToast('✓ 调仓记录已保存');
+  _renderRebalanceLog();
+};
+
 // ── FUNCTION ALIASES (previously imported with 'as') ──────────────────────
 const fsSavePlatform      = savePlatform;
 const fsDeletePlatform    = deletePlatform;
@@ -3588,6 +3921,8 @@ const fsDeleteCustomCat   = deleteCustomCat;
 const fsConnectPartner    = connectPartner;
 const fsDisconnectPartner = disconnectPartner;
 const fsMigrate           = migrateSoloDataToCouple;
+const fsRbSave            = saveRebalance;
+const fsRbDelete          = deleteRebalance;
 
 // ── AUTH STATE ────────────────────────────────────────────────────────────
 onAuthChange(async (user) => {
