@@ -667,7 +667,13 @@ body {
         <button class="btn btn-primary" id="save-rb-btn" style="padding:12px">✓ 保存调仓记录</button>
       </div>
     </div>
-    <div class="card"><div class="card-label">历史记录（最近 60 条）</div><div id="history-list"></div></div>
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div class="card-label" style="margin:0">历史记录（最近 60 条）</div>
+        <button id="export-csv-btn" style="font-size:11px;font-weight:700;padding:5px 12px;border-radius:20px;border:1.5px solid var(--teal);background:var(--teal-light);color:var(--teal);cursor:pointer;font-family:inherit">📥 导出 CSV</button>
+      </div>
+      <div id="history-list" style="max-height:320px;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain"></div>
+    </div>
   </div>
 
 </div><!-- end #app -->
@@ -3212,6 +3218,7 @@ const deletePlatformUI = async () => {
 const bindSettingsListeners = () => {
   // Static migrate button (always in HTML)
   document.getElementById('migrate-data-btn')?.addEventListener('click', _migrateData);
+  document.getElementById('export-csv-btn')?.addEventListener('click', exportCSV);
   document.getElementById('save-rb-btn')?.addEventListener('click', saveRebalanceUI);
   document.getElementById('rb-status-ctrl')?.querySelectorAll('.seg-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -3700,9 +3707,10 @@ const _renderRebalanceAnalysis = () => {
         <div style="font-size:12px;font-weight:800">${r.p.name}</div>
         <div style="font-size:10px;color:var(--muted)">${fmtRM(r.bal,0)} · ${r.p.liquid||'—'}</div>
       </div>
-      <div style="text-align:right;min-width:60px">
-        <div style="font-size:11px;font-weight:800;color:${r.t7!=null?'var(--teal)':'var(--muted)'}">${r.t7!=null?r.t7.toFixed(2)+'%':r.setEAR.toFixed(2)+'%'}</div>
-        <div style="font-size:9px;color:var(--muted)">${r.t7!=null?'实际7天':'设定'} p.a.</div>
+      <div style="text-align:right;min-width:80px">
+        <div style="font-size:12px;font-weight:800;color:${r.t7!=null?'var(--teal)':'var(--muted)'}">${r.t7!=null?r.t7.toFixed(2)+'%':'—'}</div>
+        <div style="font-size:9px;color:var(--muted)">实际7天 EAR</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px">${r.setEAR.toFixed(2)}% 设定</div>
       </div>
       <div style="min-width:70px;text-align:right">
         <div style="font-size:11px;font-weight:800;color:${r.todayI>0?'var(--teal)':'var(--muted)'}">${r.todayI>0?'+'+fmtRM(r.todayI,2):'—'}</div>
@@ -3729,7 +3737,7 @@ const _renderRebalanceAnalysis = () => {
 
   el.innerHTML = `
     <div class="card">
-      <div class="card-label">📊 平台调仓分析</div>
+      <div class="card-label">📊 平台调仓分析（实际7天 EAR）</div>
       ${tableRows}
     </div>
     <div class="card">
@@ -3905,6 +3913,55 @@ const saveRebalanceUI = async () => {
   _renderRebalanceLog();
 };
 
+
+// ── EXPORT CSV ────────────────────────────────────────────────────────────
+const exportCSV = () => {
+  const rows = [...state.entries].sort((a, b) => b.date.localeCompare(a.date));
+
+  if (!rows.length) {
+    showToast('没有数据可以导出');
+    return;
+  }
+
+  // Build CSV header
+  const headers = ['日期', '平台', '平台简称', '余额(RM)', '入/出金(RM)', '方向', '实际利息(RM)'];
+
+  const csvRows = rows.map(e => {
+    const pl = state.platforms.find(p => p.id === e.pid) || { name: e.pid, short: e.pid };
+    return [
+      e.date,
+      pl.name,
+      pl.short || '',
+      e.bal.toFixed(2),
+      (e.flow || 0).toFixed(2),
+      e.flowDir === 'in' ? '入金' : e.flowDir === 'out' ? '出金' : '',
+      (e.autoInt || 0).toFixed(2),
+    ].map(v => `"${v}"`).join(',');
+  });
+
+  // Add summary rows
+  const totalInt = rows.reduce((s, e) => s + (e.autoInt || 0), 0);
+  csvRows.push(''); // empty row
+  csvRows.push(`"总利息收入","${totalInt.toFixed(2)} RM"`);
+  csvRows.push(`"导出日期","${new Date().toLocaleDateString('zh-MY')}"`);
+  csvRows.push(`"总记录数","${rows.length}"`);
+
+  const csv = [headers.join(','), ...csvRows].join('\n');
+  const BOM      = '﻿'; // UTF-8 BOM for Excel
+  const blob     = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8;' });
+  const url      = URL.createObjectURL(blob);
+  const a        = document.createElement('a');
+  const filename = `WedFund_${new Date().toISOString().slice(0,10)}.csv`;
+
+  a.href     = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  showToast(`✓ 已导出 ${rows.length} 条记录`);
+};
 // ── FUNCTION ALIASES (previously imported with 'as') ──────────────────────
 const fsSavePlatform      = savePlatform;
 const fsDeletePlatform    = deletePlatform;
