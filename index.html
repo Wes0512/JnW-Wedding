@@ -3700,24 +3700,32 @@ const _renderRebalanceAnalysis = () => {
   const suggestions = _calcRebalanceSuggestions(rows, emergencyTarget);
 
   // Build table
+  // Table header
+  const tableHeader = `
+    <div style="display:grid;grid-template-columns:36px 1fr 72px 64px 64px;gap:6px;padding:6px 0 8px;border-bottom:2px solid var(--border);margin-bottom:2px">
+      <div></div>
+      <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">平台</div>
+      <div style="font-size:9px;font-weight:700;color:var(--muted);text-align:right;text-transform:uppercase;letter-spacing:.06em">实际/设定</div>
+      <div style="font-size:9px;font-weight:700;color:var(--muted);text-align:right;text-transform:uppercase;letter-spacing:.06em">今日息</div>
+      <div style="font-size:9px;font-weight:700;color:var(--muted);text-align:center;text-transform:uppercase;letter-spacing:.06em">建议</div>
+    </div>`;
+
   const tableRows = rows.map(r => `
-    <div style="display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--border)">
-      <div style="width:32px;height:32px;border-radius:8px;background:${r.p.bg};color:${r.p.color};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;flex-shrink:0">${r.p.short||r.p.name.slice(0,3).toUpperCase()}</div>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:12px;font-weight:800">${r.p.name}</div>
-        <div style="font-size:10px;color:var(--muted)">${fmtRM(r.bal,0)} · ${r.p.liquid||'—'}</div>
+    <div style="display:grid;grid-template-columns:36px 1fr 72px 64px 64px;gap:6px;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)">
+      <div style="width:32px;height:32px;border-radius:8px;background:${r.p.bg};color:${r.p.color};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900">${r.p.short||r.p.name.slice(0,3).toUpperCase()}</div>
+      <div style="min-width:0">
+        <div style="font-size:12px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.p.name}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px">${fmtRM(r.bal,0)} · ${r.p.liquid||'—'}</div>
       </div>
-      <div style="text-align:right;min-width:80px">
+      <div style="text-align:right">
         <div style="font-size:12px;font-weight:800;color:${r.t7!=null?'var(--teal)':'var(--muted)'}">${r.t7!=null?r.t7.toFixed(2)+'%':'—'}</div>
-        <div style="font-size:9px;color:var(--muted)">实际7天 EAR</div>
-        <div style="font-size:10px;color:var(--muted);margin-top:2px">${r.setEAR.toFixed(2)}% 设定</div>
+        <div style="font-size:9px;color:var(--muted);margin-top:1px">${r.setEAR.toFixed(2)}% 设定</div>
       </div>
-      <div style="min-width:70px;text-align:right">
-        <div style="font-size:11px;font-weight:800;color:${r.todayI>0?'var(--teal)':'var(--muted)'}">${r.todayI>0?'+'+fmtRM(r.todayI,2):'—'}</div>
-        <div style="font-size:9px;color:var(--muted)">今日息</div>
+      <div style="text-align:right">
+        <div style="font-size:12px;font-weight:800;color:${r.todayI>0?'var(--teal)':'var(--muted)'}">${r.todayI>0?'+'+fmtRM(r.todayI,2):'—'}</div>
       </div>
-      <div style="min-width:55px;text-align:center">
-        <span style="font-size:10px;font-weight:700;color:${r.statusColor}">${r.statusLabel}</span>
+      <div style="text-align:center">
+        <span style="font-size:10px;font-weight:700;color:${r.statusColor};white-space:nowrap">${r.statusLabel}</span>
       </div>
     </div>`).join('');
 
