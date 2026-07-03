@@ -661,6 +661,10 @@ body {
           </div>
         </div>
         <div class="inp-group">
+          <div class="inp-label">日期（忘了记录可改日期）</div>
+          <input class="inp sm" type="date" id="rb-date">
+        </div>
+        <div class="inp-group">
           <div class="inp-label">备注（选填）</div>
           <input class="inp sm" type="text" id="rb-note" placeholder="例：Versa Promo 到期转出">
         </div>
@@ -980,6 +984,12 @@ const startMyListeners = (onUpdate) => {
   _unsubs.push(fsListen(catCol(uid), snap => {
     state.customCats = snap.docs.map(d => d.data());
     onUpdate('cats');
+  }));
+
+  // Rebalance records listener
+  _unsubs.push(fsListen(rbCol(uid), snap => {
+    state.rebalances = snap.docs.map(d => d.data());
+    onUpdate('rebalances');
   }));
 };
 
@@ -3840,11 +3850,13 @@ const _renderRebalanceLog = () => {
   // Populate selectors
   const fromSel = document.getElementById('rb-from');
   const toSel   = document.getElementById('rb-to');
+  const dateEl  = document.getElementById('rb-date');
   if (fromSel && toSel) {
     const opts = state.platforms.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
     fromSel.innerHTML = opts;
     toSel.innerHTML   = opts;
   }
+  if (dateEl && !dateEl.value) dateEl.value = todayStr();
 
   const logs = [...(state.rebalances || [])].sort((a, b) => b.ts - a.ts).slice(0, 20);
   if (!logs.length) {
@@ -3905,7 +3917,7 @@ const saveRebalanceUI = async () => {
     id:     'rb_' + Date.now(),
     from, to, amt, note,
     status: _rbStatus,
-    date:   todayStr(),
+    date:   document.getElementById('rb-date')?.value || todayStr(),
     ts:     Date.now(),
   };
 
