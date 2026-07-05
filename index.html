@@ -446,7 +446,8 @@ body {
 
   <!-- INFLOW -->
   <div id="screen-inflow" class="screen">
-    <div class="page-header"><div><div class="page-title">入金分配</div><div class="page-sub">新收入 · 智能分配建议</div></div></div>
+    <div class="page-header"><div><div class="page-title">入金分配</div><div class="page-sub">最优配置 · 智能分配建议</div></div></div>
+    <div id="optimal-allocation-section"></div>
     <div class="seg-ctrl" id="inflow-mode-ctrl">
       <button class="seg-btn active" data-mode="salary">💼 月薪</button>
       <button class="seg-btn"        data-mode="bonus">🎉 奖金/佣金</button>
@@ -3366,6 +3367,9 @@ const calcInflow = () => {
   const resultCard = document.getElementById('inflow-result-card');
   if (!resultCard) return;
 
+  // Update optimal allocation with new inflow
+  _renderOptimalAllocation(amt);
+
   if (amt <= 0) {
     resultCard.style.display = 'none';
     return;
@@ -3982,6 +3986,200 @@ const exportCSV = () => {
 
   showToast(`✓ 已导出 ${rows.length} 条记录`);
 };
+
+// ── OPTIMAL ALLOCATION (入金界面) ─────────────────────────────────────────
+const _renderOptimalAllocation = (newInflow) => {
+  const el = document.getElementById('optimal-allocation-section');
+  if (!el) return;
+
+  const platforms    = state.platforms;
+  const emergencyTarget = state.settings.emergency_fund || 5000;
+  const totalAssets  = totalBal();
+  const now          = new Date();
+
+  if (!platforms.length) { el.innerHTML = ''; return; }
+
+  // ── Step 1: Get effective EAR for each platform ──────────────────────────
+  const platData = platforms.map(p => {
+    const bal      = getLatestBal(p.id);
+    const t7       = trailingEAR(p.id, 7);
+    const setEAR   = getPlatEAR(p);
+    const effEAR   = t7 != null ? t7 : setEAR;
+    const hasPromo = state.promos.find(pr => pr.platform === p.id && new Date(pr.expiry) >= now);
+    const promoEAR = hasPromo ? parseFloat(hasPromo.rate) : null;
+    const finalEAR = promoEAR || effEAR;
+    const liqDays  = p.liquid === 'T+0' ? 0
+                   : p.liquid === 'T+1' ? 1
+                   : p.liquid === 'T+2' ? 2
+                   : p.liquid === 'T+3' ? 3
+                   : p.liquid === 'T+5' ? 5
+                   : 999;
+    return { p, bal, effEAR, setEAR, finalEAR, liqDays, hasPromo, promoEAR, t7 };
+  }).sort((a, b) => b.finalEAR - a.finalEAR);
+
+  // ── Step 2: Calculate optimal allocation ─────────────────────────────────
+  const totalToAllocate = totalAssets + (newInflow || 0);
+  const allocation = {};
+  platforms.forEach(p => allocation[p.id] = 0);
+
+  let remaining = totalToAllocate;
+
+  // Priority 1: Emergency fund → highest EAR T+0/T+1 platform
+  const emergencyPlats = platData.filter(d => d.liqDays <= 1).sort((a, b) => b.finalEAR - a.finalEAR);
+  if (emergencyPlats.length > 0) {
+    const ep = emergencyPlats[0];
+    const currentEmergency = platData.filter(d => d.liqDays <= 1).reduce((s, d) => s + d.bal, 0);
+    const needed = Math.max(0, emergencyTarget - currentEmergency);
+    const toAdd  = newInflow ? Math.min(needed, remaining) : emergencyTarget;
+    allocation[ep.p.id] = toAdd;
+    remaining -= toAdd;
+  }
+
+  // Priority 2: Active Promo platforms (max 30% of total)
+  const promoPlats = platData.filter(d => d.hasPromo && d.liqDays < 999);
+  promoPlats.forEach(d => {
+    const promoLimit = totalToAllocate * 0.3;
+    const current    = d.bal;
+    const canAdd     = Math.max(0, Math.min(promoLimit - current, remaining));
+    allocation[d.p.id] = (allocation[d.p.id] || 0) + canAdd;
+    remaining -= canAdd;
+  });
+
+  // Priority 3: Main wedding fund → highest regular EAR (non-promo, T+0~T+2)
+  const mainPlats = platData
+    .filter(d => !d.hasPromo && d.liqDays <= 2)
+    .sort((a, b) => b.finalEAR - a.finalEAR);
+
+  mainPlats.forEach((d, idx) => {
+    if (remaining <= 0) return;
+    const maxPct  = idx === 0 ? 0.60 : 0.30; // first gets 60%, others 30%
+    const maxAmt  = totalToAllocate * maxPct;
+    const current = d.bal;
+    const canAdd  = Math.max(0, Math.min(maxAmt - current, remaining));
+    allocation[d.p.id] = (allocation[d.p.id] || 0) + canAdd;
+    remaining -= canAdd;
+  });
+
+  // Any leftover → best platform
+  if (remaining > 0 && mainPlats.length > 0) {
+    allocation[mainPlats[0].p.id] = (allocation[mainPlats[0].p.id] || 0) + remaining;
+    remaining = 0;
+  }
+
+  // ── Step 3: Calculate projected annual return ─────────────────────────────
+  const currentReturn = platData.reduce((s, d) => s + d.bal * d.finalEAR / 100, 0);
+  const optimalReturn = platData.reduce((s, d) => s + allocation[d.p.id] * d.finalEAR / 100, 0);
+  const gain          = optimalReturn - currentReturn;
+
+  // ── Step 4: New inflow specific advice ───────────────────────────────────
+  let inflowRows = '';
+  if (newInflow > 0) {
+    const inflowAlloc = {};
+    platforms.forEach(p => inflowAlloc[p.id] = 0);
+    let inflowRemaining = newInflow;
+
+    // Emergency top-up first
+    if (emergencyPlats.length > 0) {
+      const ep = emergencyPlats[0];
+      const currentEmergency = platData.filter(d => d.liqDays <= 1).reduce((s,d) => s + d.bal, 0);
+      const needed = Math.max(0, emergencyTarget - currentEmergency);
+      const toAdd  = Math.min(needed, inflowRemaining);
+      if (toAdd > 0) { inflowAlloc[ep.p.id] += toAdd; inflowRemaining -= toAdd; }
+    }
+    // Promo
+    promoPlats.forEach(d => {
+      const promoLimit = totalToAllocate * 0.3;
+      const gap = Math.max(0, promoLimit - d.bal - allocation[d.p.id] + (inflowAlloc[d.p.id]||0));
+      const toAdd = Math.min(gap, inflowRemaining);
+      if (toAdd > 0) { inflowAlloc[d.p.id] += toAdd; inflowRemaining -= toAdd; }
+    });
+    // Main
+    mainPlats.forEach((d, idx) => {
+      if (inflowRemaining <= 0) return;
+      const maxPct = idx === 0 ? 0.60 : 0.30;
+      const maxAmt = totalToAllocate * maxPct;
+      const gap    = Math.max(0, maxAmt - d.bal);
+      const toAdd  = Math.min(gap, inflowRemaining);
+      if (toAdd > 0) { inflowAlloc[d.p.id] += toAdd; inflowRemaining -= toAdd; }
+    });
+    if (inflowRemaining > 0 && mainPlats.length > 0) {
+      inflowAlloc[mainPlats[0].p.id] += inflowRemaining;
+    }
+
+    inflowRows = `
+      <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
+        <div class="card-label">💰 本次入金 ${fmtRM(newInflow)} 建议放入</div>
+        ${platData.filter(d => inflowAlloc[d.p.id] > 0).map(d => `
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">
+            <div style="width:28px;height:28px;border-radius:7px;background:${d.p.bg};color:${d.p.color};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;flex-shrink:0">${d.p.short||d.p.name.slice(0,3).toUpperCase()}</div>
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:800">${d.p.name}</div>
+              <div style="font-size:10px;color:var(--muted)">${d.finalEAR.toFixed(2)}% ${d.hasPromo?'Promo':d.t7!=null?'实际EAR':'设定'} · ${d.p.liquid||'—'}</div>
+            </div>
+            <div style="font-weight:900;font-size:15px;color:var(--teal)">${fmtRM(inflowAlloc[d.p.id],0)}</div>
+          </div>`).join('')}
+      </div>`;
+  }
+
+  // ── Step 5: Render ────────────────────────────────────────────────────────
+  const totalRows = platData.map(d => {
+    const optAmt  = allocation[d.p.id] || 0;
+    const diff    = optAmt - d.bal;
+    const diffStr = diff > 100  ? `<span style="color:var(--teal);font-size:10px">+${fmtRM(diff,0)}</span>`
+                  : diff < -100 ? `<span style="color:var(--red);font-size:10px">${fmtRM(diff,0)}</span>`
+                  : `<span style="color:var(--muted);font-size:10px">持平</span>`;
+    const earStr  = d.hasPromo
+      ? `<span style="color:var(--purple);font-size:10px">Promo ${d.promoEAR.toFixed(2)}%</span>`
+      : d.t7 != null
+        ? `<span style="color:var(--teal);font-size:10px">实际 ${d.t7.toFixed(2)}%</span>`
+        : `<span style="color:var(--muted);font-size:10px">设定 ${d.setEAR.toFixed(2)}%</span>`;
+
+    return `
+      <div style="display:grid;grid-template-columns:28px 1fr 70px 50px 45px;gap:6px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
+        <div style="width:28px;height:28px;border-radius:7px;background:${d.p.bg};color:${d.p.color};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900">${d.p.short||d.p.name.slice(0,3).toUpperCase()}</div>
+        <div>
+          <div style="font-size:12px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.p.name}</div>
+          <div style="margin-top:1px">${earStr}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:12px;font-weight:800">${fmtRM(optAmt,0)}</div>
+          <div style="font-size:9px;color:var(--muted)">现在 ${fmtRM(d.bal,0)}</div>
+        </div>
+        <div style="text-align:center">${diffStr}</div>
+        <div style="text-align:right">
+          <div style="font-size:10px;color:var(--muted)">${d.p.liquid||'—'}</div>
+        </div>
+      </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="card" style="margin-bottom:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div class="card-label" style="margin:0">📊 总资金最优配置</div>
+        <div style="text-align:right">
+          <div style="font-size:11px;color:var(--muted)">总资产 <strong style="color:var(--text)">${fmtRM(totalToAllocate,0)}</strong></div>
+          ${gain > 0 ? `<div style="font-size:10px;color:var(--teal)">优化后多 +${fmtRM(gain,0)}/年</div>` : ''}
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:28px 1fr 70px 50px 45px;gap:6px;padding:4px 0 8px;border-bottom:2px solid var(--border);margin-bottom:2px">
+        <div></div>
+        <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase">平台</div>
+        <div style="font-size:9px;font-weight:700;color:var(--muted);text-align:right;text-transform:uppercase">建议金额</div>
+        <div style="font-size:9px;font-weight:700;color:var(--muted);text-align:center;text-transform:uppercase">调整</div>
+        <div style="font-size:9px;font-weight:700;color:var(--muted);text-align:right;text-transform:uppercase">流动</div>
+      </div>
+      ${totalRows}
+      <div style="display:flex;justify-content:space-between;padding:10px 0 2px;font-size:12px">
+        <span style="color:var(--muted)">预估年收益</span>
+        <span style="font-weight:800;color:var(--teal)">${fmtRM(optimalReturn,0)}/年 (${fmtRM(optimalReturn/12,0)}/月)</span>
+      </div>
+      ${inflowRows}
+      <div style="margin-top:10px;padding:8px 10px;border-radius:8px;background:var(--bg);font-size:11px;color:var(--muted);line-height:1.6">
+        ⚠️ 标注「设定」的平台数据不足7天，建议继续记录余额以获得更准确的实际 EAR
+      </div>
+    </div>`;
+};
+
 // ── FUNCTION ALIASES (previously imported with 'as') ──────────────────────
 const fsSavePlatform      = savePlatform;
 const fsDeletePlatform    = deletePlatform;
