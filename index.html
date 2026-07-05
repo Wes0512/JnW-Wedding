@@ -693,6 +693,7 @@ body {
     <div class="inp-group"><div class="inp-label">平台名称</div><input class="inp sm" type="text" id="pm-name" placeholder="例：Versa、GX Bank FD"></div>
     <div class="inp-group"><div class="inp-label">简称（3–4 字）</div><input class="inp sm" type="text" id="pm-short" placeholder="例：VER" maxlength="4" style="text-transform:uppercase"></div>
     <div class="inp-group"><div class="inp-label">利率 % p.a.</div><input class="inp sm" type="number" id="pm-ear" placeholder="3.50" step="0.1" inputmode="decimal"></div>
+    <div class="inp-group"><div class="inp-label">高息存款上限 (RM) — 选填</div><input class="inp sm" type="number" id="pm-cap" placeholder="例：Versa 30000，SPay 1000，无上限留空" inputmode="decimal"></div>
     <div class="inp-group"><div class="inp-label">流动性</div>
       <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px" id="pm-liquid-ctrl">
         <button class="seg-btn active" data-liquid="T+0" style="flex:1;min-width:60px">T+0</button>
@@ -3099,7 +3100,7 @@ const openPlatModal = (editId) => {
   _pmRole   = 'primary';
   _pmColor  = PLAT_COLORS[0];
 
-  ['pm-name', 'pm-short', 'pm-ear'].forEach(id => {
+  ['pm-name', 'pm-short', 'pm-ear', 'pm-cap'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
   document.getElementById('pm-editing-id').value = '';
@@ -3113,6 +3114,7 @@ const openPlatModal = (editId) => {
     document.getElementById('pm-name').value  = p.name;
     document.getElementById('pm-short').value = p.short || '';
     document.getElementById('pm-ear').value   = getPlatEAR(p);
+    document.getElementById('pm-cap').value   = p.cap || '';
     document.getElementById('pm-editing-id').value = editId;
     if (delBtn) delBtn.style.display = 'block';
     document.getElementById('plat-modal-title').textContent = '编辑平台';
@@ -3173,6 +3175,8 @@ const savePlatformUI = async () => {
   const name   = document.getElementById('pm-name')?.value.trim();
   const shortR = document.getElementById('pm-short')?.value.trim().toUpperCase();
   const ear    = parseFloat(document.getElementById('pm-ear')?.value);
+  const capVal = parseFloat(document.getElementById('pm-cap')?.value);
+  const cap    = capVal > 0 ? capVal : null;
   const editId = document.getElementById('pm-editing-id')?.value;
 
   if (!name)          { showToast('请填写平台名称'); return; }
@@ -3185,7 +3189,7 @@ const savePlatformUI = async () => {
     if (idx >= 0) {
       state.platforms[idx] = {
         ...state.platforms[idx],
-        name, short, ear,
+        name, short, ear, cap,
         liquid: _pmLiquid,
         role:   _pmRole,
         color:  _pmColor.hex,
@@ -3196,7 +3200,7 @@ const savePlatformUI = async () => {
   } else {
     const p = {
       id:     'p_' + Date.now(),
-      name, short, ear,
+      name, short, ear, cap,
       liquid: _pmLiquid,
       role:   _pmRole,
       color:  _pmColor.hex,
@@ -4017,52 +4021,63 @@ const _renderOptimalAllocation = (newInflow) => {
     return { p, bal, effEAR, setEAR, finalEAR, liqDays, hasPromo, promoEAR, t7 };
   }).sort((a, b) => b.finalEAR - a.finalEAR);
 
-  // ── Step 2: Calculate optimal allocation ─────────────────────────────────
+  // ── Step 2: Calculate optimal allocation (with caps + cascade) ──────────
   const totalToAllocate = totalAssets + (newInflow || 0);
   const allocation = {};
   platforms.forEach(p => allocation[p.id] = 0);
 
   let remaining = totalToAllocate;
 
-  // Priority 1: Emergency fund → highest EAR T+0/T+1 platform
+  // Helper: how much can this platform still take (respects cap)
+  const roomLeft = (d) => {
+    const cap = d.p.cap || Infinity;
+    return Math.max(0, cap - allocation[d.p.id]);
+  };
+
+  // Priority 1: Emergency fund → highest EAR T+0/T+1 platform (respect cap)
   const emergencyPlats = platData.filter(d => d.liqDays <= 1).sort((a, b) => b.finalEAR - a.finalEAR);
-  if (emergencyPlats.length > 0) {
-    const ep = emergencyPlats[0];
-    const currentEmergency = platData.filter(d => d.liqDays <= 1).reduce((s, d) => s + d.bal, 0);
-    const needed = Math.max(0, emergencyTarget - currentEmergency);
-    const toAdd  = newInflow ? Math.min(needed, remaining) : emergencyTarget;
-    allocation[ep.p.id] = toAdd;
+  let emergencyLeft = emergencyTarget;
+  for (const ep of emergencyPlats) {
+    if (emergencyLeft <= 0 || remaining <= 0) break;
+    const toAdd = Math.min(emergencyLeft, roomLeft(ep), remaining);
+    allocation[ep.p.id] += toAdd;
+    emergencyLeft -= toAdd;
     remaining -= toAdd;
   }
 
-  // Priority 2: Active Promo platforms (max 30% of total)
-  const promoPlats = platData.filter(d => d.hasPromo && d.liqDays < 999);
-  promoPlats.forEach(d => {
-    const promoLimit = totalToAllocate * 0.3;
-    const current    = d.bal;
-    const canAdd     = Math.max(0, Math.min(promoLimit - current, remaining));
-    allocation[d.p.id] = (allocation[d.p.id] || 0) + canAdd;
-    remaining -= canAdd;
-  });
+  // Priority 2: Active Promo platforms — up to min(cap, 35% of total each)
+  const promoPlats = platData.filter(d => d.hasPromo && d.liqDays < 999)
+    .sort((a, b) => b.finalEAR - a.finalEAR);
+  for (const d of promoPlats) {
+    if (remaining <= 0) break;
+    const promoLimit = Math.min(d.p.cap || Infinity, totalToAllocate * 0.35);
+    const toAdd = Math.max(0, Math.min(promoLimit - allocation[d.p.id], roomLeft(d), remaining));
+    allocation[d.p.id] += toAdd;
+    remaining -= toAdd;
+  }
 
-  // Priority 3: Main wedding fund → highest regular EAR (non-promo, T+0~T+2)
-  const mainPlats = platData
-    .filter(d => !d.hasPromo && d.liqDays <= 2)
+  // Priority 3: Cascade through ALL remaining platforms by effective EAR
+  // First platform max 60% of total, then cascade overflow to next best
+  const cascadePlats = platData
+    .filter(d => d.liqDays <= 3)   // exclude locked
     .sort((a, b) => b.finalEAR - a.finalEAR);
 
-  mainPlats.forEach((d, idx) => {
-    if (remaining <= 0) return;
-    const maxPct  = idx === 0 ? 0.60 : 0.30; // first gets 60%, others 30%
-    const maxAmt  = totalToAllocate * maxPct;
-    const current = d.bal;
-    const canAdd  = Math.max(0, Math.min(maxAmt - current, remaining));
-    allocation[d.p.id] = (allocation[d.p.id] || 0) + canAdd;
-    remaining -= canAdd;
-  });
+  let isFirst = true;
+  for (const d of cascadePlats) {
+    if (remaining <= 0) break;
+    const concentrationCap = isFirst ? totalToAllocate * 0.60 : Infinity;
+    const maxHere = Math.min(concentrationCap - allocation[d.p.id], roomLeft(d));
+    const toAdd   = Math.max(0, Math.min(maxHere, remaining));
+    if (toAdd > 0) {
+      allocation[d.p.id] += toAdd;
+      remaining -= toAdd;
+      isFirst = false;
+    }
+  }
 
-  // Any leftover → best platform
-  if (remaining > 0 && mainPlats.length > 0) {
-    allocation[mainPlats[0].p.id] = (allocation[mainPlats[0].p.id] || 0) + remaining;
+  // Absolute leftover (all caps hit) → best platform regardless
+  if (remaining > 0 && cascadePlats.length > 0) {
+    allocation[cascadePlats[0].p.id] += remaining;
     remaining = 0;
   }
 
@@ -4071,50 +4086,38 @@ const _renderOptimalAllocation = (newInflow) => {
   const optimalReturn = platData.reduce((s, d) => s + allocation[d.p.id] * d.finalEAR / 100, 0);
   const gain          = optimalReturn - currentReturn;
 
-  // ── Step 4: New inflow specific advice ───────────────────────────────────
+  // ── Step 4: New inflow specific advice (diff between optimal and current) ─
   let inflowRows = '';
   if (newInflow > 0) {
+    // The inflow should go where optimal allocation exceeds current balance
     const inflowAlloc = {};
-    platforms.forEach(p => inflowAlloc[p.id] = 0);
     let inflowRemaining = newInflow;
+    const gaps = platData
+      .map(d => ({ d, gap: Math.max(0, (allocation[d.p.id] || 0) - d.bal) }))
+      .filter(g => g.gap > 0)
+      .sort((a, b) => b.d.finalEAR - a.d.finalEAR);
 
-    // Emergency top-up first
-    if (emergencyPlats.length > 0) {
-      const ep = emergencyPlats[0];
-      const currentEmergency = platData.filter(d => d.liqDays <= 1).reduce((s,d) => s + d.bal, 0);
-      const needed = Math.max(0, emergencyTarget - currentEmergency);
-      const toAdd  = Math.min(needed, inflowRemaining);
-      if (toAdd > 0) { inflowAlloc[ep.p.id] += toAdd; inflowRemaining -= toAdd; }
+    for (const g of gaps) {
+      if (inflowRemaining <= 0) break;
+      const toAdd = Math.min(g.gap, inflowRemaining);
+      inflowAlloc[g.d.p.id] = toAdd;
+      inflowRemaining -= toAdd;
     }
-    // Promo
-    promoPlats.forEach(d => {
-      const promoLimit = totalToAllocate * 0.3;
-      const gap = Math.max(0, promoLimit - d.bal - allocation[d.p.id] + (inflowAlloc[d.p.id]||0));
-      const toAdd = Math.min(gap, inflowRemaining);
-      if (toAdd > 0) { inflowAlloc[d.p.id] += toAdd; inflowRemaining -= toAdd; }
-    });
-    // Main
-    mainPlats.forEach((d, idx) => {
-      if (inflowRemaining <= 0) return;
-      const maxPct = idx === 0 ? 0.60 : 0.30;
-      const maxAmt = totalToAllocate * maxPct;
-      const gap    = Math.max(0, maxAmt - d.bal);
-      const toAdd  = Math.min(gap, inflowRemaining);
-      if (toAdd > 0) { inflowAlloc[d.p.id] += toAdd; inflowRemaining -= toAdd; }
-    });
-    if (inflowRemaining > 0 && mainPlats.length > 0) {
-      inflowAlloc[mainPlats[0].p.id] += inflowRemaining;
+    // Leftover → best available platform
+    if (inflowRemaining > 0 && platData.length > 0) {
+      const best = platData[0];
+      inflowAlloc[best.p.id] = (inflowAlloc[best.p.id] || 0) + inflowRemaining;
     }
 
     inflowRows = `
       <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
         <div class="card-label">💰 本次入金 ${fmtRM(newInflow)} 建议放入</div>
-        ${platData.filter(d => inflowAlloc[d.p.id] > 0).map(d => `
+        ${platData.filter(d => (inflowAlloc[d.p.id]||0) > 0).map(d => `
           <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">
             <div style="width:28px;height:28px;border-radius:7px;background:${d.p.bg};color:${d.p.color};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;flex-shrink:0">${d.p.short||d.p.name.slice(0,3).toUpperCase()}</div>
             <div style="flex:1">
               <div style="font-size:13px;font-weight:800">${d.p.name}</div>
-              <div style="font-size:10px;color:var(--muted)">${d.finalEAR.toFixed(2)}% ${d.hasPromo?'Promo':d.t7!=null?'实际EAR':'设定'} · ${d.p.liquid||'—'}</div>
+              <div style="font-size:10px;color:var(--muted)">${d.finalEAR.toFixed(2)}% ${d.hasPromo?'Promo':d.t7!=null?'实际EAR':'设定'} · ${d.p.liquid||'—'}${d.p.cap?' · 上限'+fmtRM(d.p.cap,0):''}</div>
             </div>
             <div style="font-weight:900;font-size:15px;color:var(--teal)">${fmtRM(inflowAlloc[d.p.id],0)}</div>
           </div>`).join('')}
@@ -4148,6 +4151,7 @@ const _renderOptimalAllocation = (newInflow) => {
         <div style="text-align:center">${diffStr}</div>
         <div style="text-align:right">
           <div style="font-size:10px;color:var(--muted)">${d.p.liquid||'—'}</div>
+          ${d.p.cap?`<div style="font-size:8px;color:var(--amber)">≤${fmtRM(d.p.cap,0)}</div>`:''}
         </div>
       </div>`;
   }).join('');
