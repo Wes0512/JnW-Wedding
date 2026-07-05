@@ -3372,7 +3372,7 @@ const calcInflow = () => {
   if (!resultCard) return;
 
   // Update optimal allocation with new inflow
-  _renderOptimalAllocation(amt);
+  
 
   if (amt <= 0) {
     resultCard.style.display = 'none';
@@ -3991,20 +3991,12 @@ const exportCSV = () => {
   showToast(`✓ 已导出 ${rows.length} 条记录`);
 };
 
-// ── OPTIMAL ALLOCATION (入金界面) ─────────────────────────────────────────
-const _renderOptimalAllocation = (newInflow) => {
-  const el = document.getElementById('optimal-allocation-section');
-  if (!el) return;
+// ── ALLOCATION SIMULATOR (入金界面) ──────────────────────────────────────
+let _simAmounts = {};  // user-entered amounts per platform
 
-  const platforms    = state.platforms;
-  const emergencyTarget = state.settings.emergency_fund || 5000;
-  const totalAssets  = totalBal();
-  const now          = new Date();
-
-  if (!platforms.length) { el.innerHTML = ''; return; }
-
-  // ── Step 1: Get effective EAR for each platform ──────────────────────────
-  const platData = platforms.map(p => {
+const _getPlatData = () => {
+  const now = new Date();
+  return state.platforms.map(p => {
     const bal      = getLatestBal(p.id);
     const t7       = trailingEAR(p.id, 7);
     const setEAR   = getPlatEAR(p);
@@ -4020,169 +4012,156 @@ const _renderOptimalAllocation = (newInflow) => {
                    : 999;
     return { p, bal, effEAR, setEAR, finalEAR, liqDays, hasPromo, promoEAR, t7 };
   }).sort((a, b) => b.finalEAR - a.finalEAR);
+};
 
-  // ── Step 2: Calculate optimal allocation (with caps + cascade) ──────────
-  const totalToAllocate = totalAssets + (newInflow || 0);
-  const allocation = {};
-  platforms.forEach(p => allocation[p.id] = 0);
+// Optimal allocation with caps + cascade
+const _calcOptimal = (platData, total) => {
+  const alloc = {};
+  platData.forEach(d => alloc[d.p.id] = 0);
+  let remaining = total;
+  const emergencyTarget = state.settings.emergency_fund || 5000;
 
-  let remaining = totalToAllocate;
+  const roomLeft = d => Math.max(0, (d.p.cap || Infinity) - alloc[d.p.id]);
 
-  // Helper: how much can this platform still take (respects cap)
-  const roomLeft = (d) => {
-    const cap = d.p.cap || Infinity;
-    return Math.max(0, cap - allocation[d.p.id]);
-  };
-
-  // Priority 1: Emergency fund → highest EAR T+0/T+1 platform (respect cap)
-  const emergencyPlats = platData.filter(d => d.liqDays <= 1).sort((a, b) => b.finalEAR - a.finalEAR);
-  let emergencyLeft = emergencyTarget;
-  for (const ep of emergencyPlats) {
-    if (emergencyLeft <= 0 || remaining <= 0) break;
-    const toAdd = Math.min(emergencyLeft, roomLeft(ep), remaining);
-    allocation[ep.p.id] += toAdd;
-    emergencyLeft -= toAdd;
-    remaining -= toAdd;
+  // 1. Emergency: highest EAR T+0/T+1 platforms until target met
+  let emLeft = Math.min(emergencyTarget, remaining);
+  for (const d of platData.filter(x => x.liqDays <= 1)) {
+    if (emLeft <= 0) break;
+    const add = Math.min(emLeft, roomLeft(d), remaining);
+    alloc[d.p.id] += add; emLeft -= add; remaining -= add;
   }
 
-  // Priority 2: Active Promo platforms — up to min(cap, 35% of total each)
-  const promoPlats = platData.filter(d => d.hasPromo && d.liqDays < 999)
-    .sort((a, b) => b.finalEAR - a.finalEAR);
-  for (const d of promoPlats) {
+  // 2. Promo platforms: up to min(cap, 35% total)
+  for (const d of platData.filter(x => x.hasPromo && x.liqDays < 999)) {
     if (remaining <= 0) break;
-    const promoLimit = Math.min(d.p.cap || Infinity, totalToAllocate * 0.35);
-    const toAdd = Math.max(0, Math.min(promoLimit - allocation[d.p.id], roomLeft(d), remaining));
-    allocation[d.p.id] += toAdd;
-    remaining -= toAdd;
+    const limit = Math.min(d.p.cap || Infinity, total * 0.35);
+    const add = Math.max(0, Math.min(limit - alloc[d.p.id], roomLeft(d), remaining));
+    alloc[d.p.id] += add; remaining -= add;
   }
 
-  // Priority 3: Cascade through ALL remaining platforms by effective EAR
-  // First platform max 60% of total, then cascade overflow to next best
-  const cascadePlats = platData
-    .filter(d => d.liqDays <= 3)   // exclude locked
-    .sort((a, b) => b.finalEAR - a.finalEAR);
-
-  let isFirst = true;
-  for (const d of cascadePlats) {
+  // 3. Cascade: best EAR first (max 45%), then spread
+  const rest = platData.filter(x => x.liqDays <= 3);
+  let first = true;
+  for (const d of rest) {
     if (remaining <= 0) break;
-    const concentrationCap = isFirst ? totalToAllocate * 0.60 : Infinity;
-    const maxHere = Math.min(concentrationCap - allocation[d.p.id], roomLeft(d));
-    const toAdd   = Math.max(0, Math.min(maxHere, remaining));
-    if (toAdd > 0) {
-      allocation[d.p.id] += toAdd;
-      remaining -= toAdd;
-      isFirst = false;
-    }
+    const conc = first ? total * 0.45 : Infinity;
+    const add = Math.max(0, Math.min(conc - alloc[d.p.id], roomLeft(d), remaining));
+    if (add > 0) { alloc[d.p.id] += add; remaining -= add; first = false; }
+  }
+  if (remaining > 0 && rest.length) { alloc[rest[0].p.id] += remaining; remaining = 0; }
+  return alloc;
+};
+
+const _blendedEARof = (platData, amounts) => {
+  let tot = 0, wt = 0;
+  platData.forEach(d => {
+    const amt = amounts[d.p.id] || 0;
+    tot += amt; wt += amt * d.finalEAR;
+  });
+  return tot > 0 ? wt / tot : 0;
+};
+
+const _renderOptimalAllocation = () => {
+  const el = document.getElementById('optimal-allocation-section');
+  if (!el) return;
+  const platData = _getPlatData();
+  if (!platData.length) { el.innerHTML = ''; return; }
+
+  const totalAssets = totalBal();
+
+  // Initialise sim amounts to current balances if empty
+  if (Object.keys(_simAmounts).length === 0) {
+    platData.forEach(d => { _simAmounts[d.p.id] = Math.round(d.bal); });
   }
 
-  // Absolute leftover (all caps hit) → best platform regardless
-  if (remaining > 0 && cascadePlats.length > 0) {
-    allocation[cascadePlats[0].p.id] += remaining;
-    remaining = 0;
-  }
+  const simTotal   = platData.reduce((s, d) => s + (_simAmounts[d.p.id] || 0), 0);
+  const myEAR      = _blendedEARof(platData, _simAmounts);
+  const myReturn   = platData.reduce((s, d) => s + (_simAmounts[d.p.id]||0) * d.finalEAR / 100, 0);
 
-  // ── Step 3: Calculate projected annual return ─────────────────────────────
-  const currentReturn = platData.reduce((s, d) => s + d.bal * d.finalEAR / 100, 0);
-  const optimalReturn = platData.reduce((s, d) => s + allocation[d.p.id] * d.finalEAR / 100, 0);
-  const gain          = optimalReturn - currentReturn;
+  const optAlloc   = _calcOptimal(platData, simTotal || totalAssets);
+  const optEAR     = _blendedEARof(platData, optAlloc);
+  const optReturn  = platData.reduce((s, d) => s + (optAlloc[d.p.id]||0) * d.finalEAR / 100, 0);
 
-  // ── Step 4: New inflow specific advice (diff between optimal and current) ─
-  let inflowRows = '';
-  if (newInflow > 0) {
-    // The inflow should go where optimal allocation exceeds current balance
-    const inflowAlloc = {};
-    let inflowRemaining = newInflow;
-    const gaps = platData
-      .map(d => ({ d, gap: Math.max(0, (allocation[d.p.id] || 0) - d.bal) }))
-      .filter(g => g.gap > 0)
-      .sort((a, b) => b.d.finalEAR - a.d.finalEAR);
+  const gap = optEAR - myEAR;
+  let verdict, verdictColor;
+  if (gap < 0.1)      { verdict = '✅ 配置合理'; verdictColor = 'var(--teal)'; }
+  else if (gap < 0.3) { verdict = '⚠️ 有优化空间'; verdictColor = 'var(--amber)'; }
+  else                { verdict = '🔴 建议调整'; verdictColor = 'var(--red)'; }
 
-    for (const g of gaps) {
-      if (inflowRemaining <= 0) break;
-      const toAdd = Math.min(g.gap, inflowRemaining);
-      inflowAlloc[g.d.p.id] = toAdd;
-      inflowRemaining -= toAdd;
-    }
-    // Leftover → best available platform
-    if (inflowRemaining > 0 && platData.length > 0) {
-      const best = platData[0];
-      inflowAlloc[best.p.id] = (inflowAlloc[best.p.id] || 0) + inflowRemaining;
-    }
-
-    inflowRows = `
-      <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
-        <div class="card-label">💰 本次入金 ${fmtRM(newInflow)} 建议放入</div>
-        ${platData.filter(d => (inflowAlloc[d.p.id]||0) > 0).map(d => `
-          <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">
-            <div style="width:28px;height:28px;border-radius:7px;background:${d.p.bg};color:${d.p.color};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;flex-shrink:0">${d.p.short||d.p.name.slice(0,3).toUpperCase()}</div>
-            <div style="flex:1">
-              <div style="font-size:13px;font-weight:800">${d.p.name}</div>
-              <div style="font-size:10px;color:var(--muted)">${d.finalEAR.toFixed(2)}% ${d.hasPromo?'Promo':d.t7!=null?'实际EAR':'设定'} · ${d.p.liquid||'—'}${d.p.cap?' · 上限'+fmtRM(d.p.cap,0):''}</div>
-            </div>
-            <div style="font-weight:900;font-size:15px;color:var(--teal)">${fmtRM(inflowAlloc[d.p.id],0)}</div>
-          </div>`).join('')}
-      </div>`;
-  }
-
-  // ── Step 5: Render ────────────────────────────────────────────────────────
-  const totalRows = platData.map(d => {
-    const optAmt  = allocation[d.p.id] || 0;
-    const diff    = optAmt - d.bal;
-    const diffStr = diff > 100  ? `<span style="color:var(--teal);font-size:10px">+${fmtRM(diff,0)}</span>`
-                  : diff < -100 ? `<span style="color:var(--red);font-size:10px">${fmtRM(diff,0)}</span>`
-                  : `<span style="color:var(--muted);font-size:10px">持平</span>`;
-    const earStr  = d.hasPromo
-      ? `<span style="color:var(--purple);font-size:10px">Promo ${d.promoEAR.toFixed(2)}%</span>`
+  const inputRows = platData.map(d => {
+    const earStr = d.hasPromo
+      ? `<span style="color:var(--purple)">Promo ${d.promoEAR.toFixed(2)}%</span>`
       : d.t7 != null
-        ? `<span style="color:var(--teal);font-size:10px">实际 ${d.t7.toFixed(2)}%</span>`
-        : `<span style="color:var(--muted);font-size:10px">设定 ${d.setEAR.toFixed(2)}%</span>`;
-
+        ? `<span style="color:var(--teal)">实际 ${d.t7.toFixed(2)}%</span>`
+        : `<span style="color:var(--muted)">设定 ${d.setEAR.toFixed(2)}%</span>`;
+    const optAmt = optAlloc[d.p.id] || 0;
     return `
-      <div style="display:grid;grid-template-columns:28px 1fr 70px 50px 45px;gap:6px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
-        <div style="width:28px;height:28px;border-radius:7px;background:${d.p.bg};color:${d.p.color};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900">${d.p.short||d.p.name.slice(0,3).toUpperCase()}</div>
-        <div>
+      <div style="display:grid;grid-template-columns:30px 1fr 95px 68px;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
+        <div style="width:30px;height:30px;border-radius:8px;background:${d.p.bg};color:${d.p.color};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900">${d.p.short||d.p.name.slice(0,3).toUpperCase()}</div>
+        <div style="min-width:0">
           <div style="font-size:12px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.p.name}</div>
-          <div style="margin-top:1px">${earStr}</div>
+          <div style="font-size:10px;margin-top:1px">${earStr} · ${d.p.liquid||'—'}${d.p.cap?` · ≤${fmtRM(d.p.cap,0)}`:''}</div>
         </div>
+        <input type="number" inputmode="decimal" data-sim-pid="${d.p.id}" value="${_simAmounts[d.p.id]||0}"
+          style="width:100%;padding:8px 6px;border-radius:8px;border:1.5px solid var(--border);background:var(--card);color:var(--text);font-size:13px;font-weight:800;text-align:right;font-family:inherit;outline:none">
         <div style="text-align:right">
-          <div style="font-size:12px;font-weight:800">${fmtRM(optAmt,0)}</div>
-          <div style="font-size:9px;color:var(--muted)">现在 ${fmtRM(d.bal,0)}</div>
-        </div>
-        <div style="text-align:center">${diffStr}</div>
-        <div style="text-align:right">
-          <div style="font-size:10px;color:var(--muted)">${d.p.liquid||'—'}</div>
-          ${d.p.cap?`<div style="font-size:8px;color:var(--amber)">≤${fmtRM(d.p.cap,0)}</div>`:''}
+          <div style="font-size:10px;color:var(--muted)">建议</div>
+          <div style="font-size:11px;font-weight:800;color:var(--teal)">${fmtRM(optAmt,0)}</div>
         </div>
       </div>`;
   }).join('');
 
   el.innerHTML = `
     <div class="card" style="margin-bottom:12px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <div class="card-label" style="margin:0">📊 总资金最优配置</div>
-        <div style="text-align:right">
-          <div style="font-size:11px;color:var(--muted)">总资产 <strong style="color:var(--text)">${fmtRM(totalToAllocate,0)}</strong></div>
-          ${gain > 0 ? `<div style="font-size:10px;color:var(--teal)">优化后多 +${fmtRM(gain,0)}/年</div>` : ''}
-        </div>
-      </div>
-      <div style="display:grid;grid-template-columns:28px 1fr 70px 50px 45px;gap:6px;padding:4px 0 8px;border-bottom:2px solid var(--border);margin-bottom:2px">
+      <div class="card-label">🧮 分配模拟器（基于实际 EAR）</div>
+      <div style="display:grid;grid-template-columns:30px 1fr 95px 68px;gap:8px;padding:2px 0 6px;border-bottom:2px solid var(--border)">
         <div></div>
         <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase">平台</div>
-        <div style="font-size:9px;font-weight:700;color:var(--muted);text-align:right;text-transform:uppercase">建议金额</div>
-        <div style="font-size:9px;font-weight:700;color:var(--muted);text-align:center;text-transform:uppercase">调整</div>
-        <div style="font-size:9px;font-weight:700;color:var(--muted);text-align:right;text-transform:uppercase">流动</div>
+        <div style="font-size:9px;font-weight:700;color:var(--muted);text-align:right;text-transform:uppercase">我放多少</div>
+        <div style="font-size:9px;font-weight:700;color:var(--muted);text-align:right;text-transform:uppercase">系统建议</div>
       </div>
-      ${totalRows}
-      <div style="display:flex;justify-content:space-between;padding:10px 0 2px;font-size:12px">
-        <span style="color:var(--muted)">预估年收益</span>
-        <span style="font-weight:800;color:var(--teal)">${fmtRM(optimalReturn,0)}/年 (${fmtRM(optimalReturn/12,0)}/月)</span>
+      ${inputRows}
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0 4px;flex-wrap:wrap;gap:8px">
+        <div>
+          <div style="font-size:11px;color:var(--muted)">你的综合 EAR</div>
+          <div style="font-size:20px;font-weight:900;color:${verdictColor}">${myEAR.toFixed(2)}%</div>
+          <div style="font-size:10px;color:var(--muted)">${fmtRM(myReturn,0)}/年 · 总额 ${fmtRM(simTotal,0)}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:11px;color:var(--muted)">优化后可达</div>
+          <div style="font-size:16px;font-weight:800;color:var(--teal)">${optEAR.toFixed(2)}%</div>
+          <div style="font-size:10px;color:var(--muted)">${fmtRM(optReturn,0)}/年 (+${fmtRM(Math.max(0,optReturn-myReturn),0)})</div>
+        </div>
       </div>
-      ${inflowRows}
+      <div style="text-align:center;font-size:13px;font-weight:800;color:${verdictColor};padding:6px 0">${verdict}</div>
+      <button id="apply-optimal-btn" style="width:100%;padding:11px;border-radius:10px;border:1.5px solid var(--teal);background:var(--teal-light);color:var(--teal);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:4px">⚡ 一键填入优化建议</button>
       <div style="margin-top:10px;padding:8px 10px;border-radius:8px;background:var(--bg);font-size:11px;color:var(--muted);line-height:1.6">
-        ⚠️ 标注「设定」的平台数据不足7天，建议继续记录余额以获得更准确的实际 EAR
+        💡 「实际」= 你过去7天真实赚到的 EAR；「设定」= 数据不足，用平台标示利率代替
       </div>
     </div>`;
+
+  // Bind input events
+  el.querySelectorAll('[data-sim-pid]').forEach(inp => {
+    inp.addEventListener('input', () => {
+      _simAmounts[inp.dataset.simPid] = parseFloat(inp.value) || 0;
+      // Update only the summary numbers without full re-render (avoid losing focus)
+      _updateSimSummary(platData);
+    });
+    inp.addEventListener('blur', () => _renderOptimalAllocation());
+  });
+
+  // One-click apply
+  document.getElementById('apply-optimal-btn')?.addEventListener('click', () => {
+    platData.forEach(d => { _simAmounts[d.p.id] = Math.round(optAlloc[d.p.id] || 0); });
+    _renderOptimalAllocation();
+    showToast('✓ 已填入优化建议');
+  });
 };
+
+const _updateSimSummary = (platData) => {
+  // Lightweight refresh handled on blur; nothing needed here for now
+};
+
 
 // ── FUNCTION ALIASES (previously imported with 'as') ──────────────────────
 const fsSavePlatform      = savePlatform;
