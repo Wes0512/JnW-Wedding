@@ -3299,6 +3299,7 @@ const renderInflow = () => {
   // Pre-fill wedding fixed from settings
   const wfEl = document.getElementById('inflow-wedding-fixed');
   if (wfEl && !wfEl.value) wfEl.value = state.settings.topup || 2000;
+  _renderOptimalAllocation();
   _renderRules();
   calcInflow();
 };
@@ -3619,7 +3620,7 @@ const showScreen = (name) => {
   switch (name) {
     case 'home':     renderHome();                         break;
     case 'log':      renderLog();                          break;
-    case 'inflow':   renderInflow();                       break;
+    case 'inflow':   _simAmounts = {}; renderInflow();     break;
     case 'expenses': renderExpenses(); setExpTab('list');  break;
     case 'analysis': renderAnalysis();                     break;
     case 'settings': renderSettings();                     break;
