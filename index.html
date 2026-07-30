@@ -706,6 +706,7 @@ body {
 
 <!-- JS modules loaded here by main.js -->
 <script type="module">
+
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js';
 import {
   getAuth,
@@ -2020,44 +2021,46 @@ fsConnectPartner=connectPartner, fsDisconnectPartner=disconnectPartner,
 fsMigrate=migrateSoloDataToCouple;
 
 // ── AUTH STATE ────────────────────────────────────────────────────────────
-onAuthChange(async (user) => {
-  if (user) {
-    // ── Logged in ──────────────────────────────────────────────────────
-    state.uid = user.uid;
-    showApp(user);
+const _startAuthWatcher = () => {
+  onAuthChange(async (user) => {
+    if (user) {
+      // ── Logged in ──────────────────────────────────────────────────────
+      state.uid = user.uid;
+      showApp(user);
 
-    // Ensure Firestore user doc + default platforms exist
-    await ensureUserDoc(user);
+      // Ensure Firestore user doc + default platforms exist
+      await ensureUserDoc(user);
 
-    // Start real-time listeners
-    startMyListeners(onDataUpdate);
+      // Start real-time listeners
+      startMyListeners(onDataUpdate);
 
-    // Initial render
-    renderHome();
-    renderSettings();
+      // Initial render
+      renderHome();
+      renderSettings();
 
-    // Schedule daily notification if permission already granted
-    scheduleNotification();
+      // Schedule daily notification if permission already granted
+      scheduleNotification();
 
-  } else {
-    // ── Logged out ─────────────────────────────────────────────────────
-    state.uid        = null;
-    state.coupleId   = null;
-    state.partnerUid = null;
-    state.platforms  = [...DEFAULT_PLATFORMS];
-    state.entries    = [];
-    state.promos     = [];
-    state.customCats = [];
-    state.settings   = { my_goal: 50000, joint_goal: 120000, topup: 2000 };
-    state.budgetItems = [];
-    state.expenses    = [];
-    state.partnerEntries   = [];
-    state.partnerPlatforms = [];
+    } else {
+      // ── Logged out ─────────────────────────────────────────────────────
+      state.uid        = null;
+      state.coupleId   = null;
+      state.partnerUid = null;
+      state.platforms  = [...DEFAULT_PLATFORMS];
+      state.entries    = [];
+      state.promos     = [];
+      state.customCats = [];
+      state.settings   = { my_goal: 50000, joint_goal: 120000, topup: 2000 };
+      state.budgetItems = [];
+      state.expenses    = [];
+      state.partnerEntries   = [];
+      state.partnerPlatforms = [];
 
-    stopListeners();
-    showAuth();
-  }
-});
+      stopListeners();
+      showAuth();
+    }
+  });
+};
 
 // ── BIND NAV BUTTONS ──────────────────────────────────────────────────────
 const bindNav = () => {
@@ -2112,23 +2115,25 @@ if ('serviceWorker' in navigator) {
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────
-const init = () => {
-  setTodayDate();
-  bindNav();
-  bindAuth();
-  bindLogListeners();
-  bindExpensesListeners();
-  bindAnalysisListeners();
-  bindSettingsListeners();
-  bindInflowListeners();
-};
+// Global error surface — if anything throws unexpectedly, show it instead
+// of leaving the app silently frozen with a spinner or blank screen.
+window.addEventListener('error', (e) => {
+  console.error('Uncaught error:', e.error || e.message);
+  const loading = document.getElementById('loading-screen');
+  if (loading && loading.style.display !== 'none') {
+    loading.innerHTML = `<div style="padding:24px;text-align:center;color:#A32D2D;font-size:13px;line-height:1.6">
+      出错了，请截图这段文字给开发者：<br><br>
+      <code style="font-size:11px;word-break:break-all">${(e.error?.message || e.message || 'unknown error').toString().slice(0,300)}</code>
+      <br><br>
+      <button onclick="location.reload()" style="margin-top:12px;padding:10px 20px;border-radius:8px;border:none;background:#1D9E75;color:white;font-weight:700">刷新重试</button>
+    </div>`;
+    loading.style.display = 'flex';
+  }
+});
+window.addEventListener('unhandledrejection', (e) => {
+  console.error('Unhandled promise rejection:', e.reason);
+});
 
-// Run init when DOM is ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', init);
-} else {
-  init();
-}
 
 
 // ── ui-home.js ──────────────────────────────────────────────────────────
@@ -3593,6 +3598,7 @@ const _renderPromoSelector = () => {
 };
 
 // ── PROMO LIST ────────────────────────────────────────────────────────────
+const _promoArchiveInFlight = new Set();
 const _renderPromoList = () => {
   const el  = document.getElementById('promo-full-list');
   if (!el) return;
@@ -3601,12 +3607,12 @@ const _renderPromoList = () => {
   const active  = state.promos.filter(p => new Date(p.expiry) >= now).sort((a, b) => new Date(a.expiry) - new Date(b.expiry));
   const expired = state.promos.filter(p => new Date(p.expiry) <  now);
 
-  // Auto-archive: delete promos expired more than 30 days ago
-  expired.forEach(async p => {
+  // Auto-archive: delete promos expired more than 30 days ago (guarded against re-entry)
+  expired.forEach(p => {
     const daysAgo = Math.floor((now - new Date(p.expiry)) / 86400000);
-    if (daysAgo > 30) {
-      state.promos = state.promos.filter(x => x.id !== p.id);
-      try { await fsDeletePromo(p.id); } catch {}
+    if (daysAgo > 30 && !_promoArchiveInFlight.has(p.id)) {
+      _promoArchiveInFlight.add(p.id);
+      fsDeletePromo(p.id).catch(() => {}).finally(() => _promoArchiveInFlight.delete(p.id));
     }
   });
 
@@ -4307,6 +4313,42 @@ const bindInflowListeners = () => {
     document.getElementById(id)?.addEventListener('input', syncSliders);
   });
 };
+
+// ── BOOTSTRAP (must run after all functions are defined) ──────────────────
+const init = () => {
+  try {
+    setTodayDate();
+    bindNav();
+    bindAuth();
+    bindLogListeners();
+    bindExpensesListeners();
+    bindAnalysisListeners();
+    bindSettingsListeners();
+    bindInflowListeners();
+    // Start watching auth state only after all buttons/listeners are bound,
+    // so the app never renders data into a page with dead buttons.
+    _startAuthWatcher();
+  } catch (err) {
+    console.error('init() failed:', err);
+    const loading = document.getElementById('loading-screen');
+    if (loading) {
+      loading.innerHTML = `<div style="padding:24px;text-align:center;color:#A32D2D;font-size:13px;line-height:1.6">
+        初始化失败，请截图这段文字给开发者：<br><br>
+        <code style="font-size:11px;word-break:break-all">${(err?.message || 'unknown error').toString().slice(0,300)}</code>
+        <br><br>
+        <button onclick="location.reload()" style="margin-top:12px;padding:10px 20px;border-radius:8px;border:none;background:#1D9E75;color:white;font-weight:700">刷新重试</button>
+      </div>`;
+      loading.style.display = 'flex';
+    }
+  }
+};
+
+// Run init when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
 
 </script>
 
