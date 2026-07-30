@@ -338,6 +338,7 @@ body {
         <button id="go-settings-btn" style="font-size:22px;background:none;border:none;cursor:pointer;color:var(--text)">&#9881;&#65039;</button>
       </div>
     </div>
+    <div id="alerts-section"></div>
     <div class="hero">
       <div class="hero-label">我的总资产</div>
       <div class="hero-val" id="h-total">RM 0</div>
@@ -408,7 +409,6 @@ body {
       <div id="platform-overview"></div>
     </div>
     <div id="promo-alerts"></div>
-    <div id="alerts-section"></div>
   </div>
 
   <!-- LOG -->
@@ -1065,35 +1065,35 @@ const doc_platCol_item = (uid, id) => {
 
 // We import doc separately to create doc refs from collection refs
 
-const _docFromCol = (col, id) => fsDoc(col, id);
+const _docFromCol = (col, id) => _fsDoc(col, id);
 
 // ── WRITE HELPERS ─────────────────────────────────────────────────────────
 const savePlatform = async (p) => {
-  await safeWrite(() => fsSet(fsDoc(platCol(state.uid), p.id), p));
+  await safeWrite(() => fsSet(_fsDoc(platCol(state.uid), p.id), p));
 };
 
 const deletePlatform = async (id) => {
-  await fsDel(fsDoc(platCol(state.uid), id));
+  await fsDel(_fsDoc(platCol(state.uid), id));
 };
 
 const saveEntry = async (entry) => {
-  await safeWrite(() => fsSet(fsDoc(entrCol(state.uid), entry.id), entry));
+  await safeWrite(() => fsSet(_fsDoc(entrCol(state.uid), entry.id), entry));
 };
 
 const savePromo = async (p) => {
-  await safeWrite(() => fsSet(fsDoc(promoCol(state.uid), p.id), p));
+  await safeWrite(() => fsSet(_fsDoc(promoCol(state.uid), p.id), p));
 };
 
 const deletePromo = async (id) => {
-  await fsDel(fsDoc(promoCol(state.uid), id));
+  await fsDel(_fsDoc(promoCol(state.uid), id));
 };
 
 const saveCustomCat = async (cat) => {
-  await fsSet(fsDoc(catCol(state.uid), cat.id), cat);
+  await fsSet(_fsDoc(catCol(state.uid), cat.id), cat);
 };
 
 const deleteCustomCat = async (id) => {
-  await fsDel(fsDoc(catCol(state.uid), id));
+  await fsDel(_fsDoc(catCol(state.uid), id));
 };
 
 const saveUserSettings = async (settings) => {
@@ -1102,22 +1102,22 @@ const saveUserSettings = async (settings) => {
 
 const saveBudgetItem = async (item) => {
   if (!state.coupleId) return;
-  await safeWrite(() => fsSet(fsDoc(budgetCol(state.coupleId), item.id), item));
+  await safeWrite(() => fsSet(_fsDoc(budgetCol(state.coupleId), item.id), item));
 };
 
 const deleteBudgetItem = async (id) => {
   if (!state.coupleId) return;
-  await fsDel(fsDoc(budgetCol(state.coupleId), id));
+  await fsDel(_fsDoc(budgetCol(state.coupleId), id));
 };
 
 const saveExpense = async (exp) => {
   if (!state.coupleId) return;
-  await safeWrite(() => fsSet(fsDoc(expCol(state.coupleId), exp.id), exp));
+  await safeWrite(() => fsSet(_fsDoc(expCol(state.coupleId), exp.id), exp));
 };
 
 const deleteExpense = async (id) => {
   if (!state.coupleId) return;
-  await fsDel(fsDoc(expCol(state.coupleId), id));
+  await fsDel(_fsDoc(expCol(state.coupleId), id));
 };
 
 // ── PARTNER CONNECT / DISCONNECT ──────────────────────────────────────────
@@ -1172,6 +1172,7 @@ const blendedEAR = () => {
   let tot = 0, wt = 0;
   state.platforms.forEach(p => {
     const b = getLatestBal(p.id);
+    if (b <= 0) return;
     tot += b;
     wt  += b * getPlatEAR(p);
   });
@@ -1415,6 +1416,18 @@ const saveRebalanceUI = async () => {
 };
 
 const _renderRebalanceLog = () => {
+  // Populate the from/to platform dropdowns
+  const fromSel = document.getElementById('rb-from');
+  const toSel   = document.getElementById('rb-to');
+  if (fromSel && toSel) {
+    const options = state.platforms.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+    const prevFrom = fromSel.value, prevTo = toSel.value;
+    fromSel.innerHTML = options;
+    toSel.innerHTML   = options;
+    if (prevFrom && state.platforms.some(p => p.id === prevFrom)) fromSel.value = prevFrom;
+    if (prevTo   && state.platforms.some(p => p.id === prevTo))   toSel.value   = prevTo;
+  }
+
   const el = document.getElementById('rebalance-log-list');
   if (!el) return;
   const sorted = [...state.rebalances].sort((a,b) => b.date.localeCompare(a.date));
@@ -1542,31 +1555,82 @@ const _renderOptimalAllocation = () => {
   const platData = _getPlatData();
   if (!platData.length) { el.innerHTML = ''; return; }
 
-  const amt = parseFloat(document.getElementById('inflow-amt')?.value) || 0;
-  if (amt <= 0) { el.innerHTML = ''; return; }
+  const totalAssets = totalBal();
+  if (Object.keys(_simAmounts).length === 0 || !platData.every(d => d.p.id in _simAmounts)) {
+    platData.forEach(d => { if (!(d.p.id in _simAmounts)) _simAmounts[d.p.id] = Math.round(d.bal); });
+  }
 
-  const alloc      = _calcOptimal(platData, amt);
-  const optimalEAR = _blendedEARof(alloc, platData);
-  const currentEAR = blendedEAR();
+  const simTotal  = platData.reduce((s,d) => s + (_simAmounts[d.p.id]||0), 0);
+  const myEAR     = _blendedEARof(_simAmounts, platData);
+  const myReturn  = platData.reduce((s,d) => s + (_simAmounts[d.p.id]||0) * d.finalEAR/100, 0);
+  const optAlloc  = _calcOptimal(platData, simTotal || totalAssets);
+  const optEAR    = _blendedEARof(optAlloc, platData);
+  const optReturn = platData.reduce((s,d) => s + (optAlloc[d.p.id]||0) * d.finalEAR/100, 0);
+  const gap = optEAR - myEAR;
+  let verdict, verdictColor;
+  if (gap < 0.1)      { verdict = '✅ 配置合理';   verdictColor = 'var(--teal)'; }
+  else if (gap < 0.3) { verdict = '⚠️ 有优化空间'; verdictColor = 'var(--amber)'; }
+  else                { verdict = '🔴 建议调整';   verdictColor = 'var(--red)'; }
 
-  const rows = platData.filter(d => (alloc[d.p.id]||0) > 0.5).map(d => {
-    const amtHere = alloc[d.p.id];
-    const pct = (amtHere / amt * 100).toFixed(0);
-    return `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px">
-      <span>${d.p.name} <span style="color:var(--muted);font-size:10px">(${d.finalEAR.toFixed(2)}% · ${d.p.liquid})</span></span>
-      <span style="font-weight:800">${fmtRM(amtHere,0)} <span style="color:var(--muted);font-size:10px">(${pct}%)</span></span>
+  const inputRows = platData.map(d => {
+    const earStr = d.hasPromo
+      ? `<span style="color:var(--purple)">Promo ${d.promoEAR.toFixed(2)}%</span>`
+      : d.t7 != null
+        ? `<span style="color:var(--teal)">实际 ${d.t7.toFixed(2)}%</span>`
+        : `<span style="color:var(--muted)">设定 ${d.setEAR.toFixed(2)}%</span>`;
+    const optAmt = optAlloc[d.p.id] || 0;
+    return `<div style="display:grid;grid-template-columns:30px 1fr 90px 64px;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
+      <div style="width:30px;height:30px;border-radius:8px;background:${d.p.bg};color:${d.p.color};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900">${d.p.short||d.p.name.slice(0,3).toUpperCase()}</div>
+      <div>
+        <div style="font-size:12px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.p.name}</div>
+        <div style="font-size:10px;margin-top:1px">${earStr} · ${d.p.liquid||'—'}</div>
+      </div>
+      <input type="number" inputmode="decimal" data-sim-pid="${d.p.id}" value="${_simAmounts[d.p.id]||0}"
+        style="width:100%;padding:7px 6px;border-radius:8px;border:1.5px solid var(--border);background:var(--card);color:var(--text);font-size:12px;font-weight:800;text-align:right;font-family:inherit;outline:none">
+      <div style="text-align:right">
+        <div style="font-size:9px;color:var(--muted)">建议</div>
+        <div style="font-size:11px;font-weight:800;color:var(--teal)">${fmtRM(optAmt,0)}</div>
+      </div>
     </div>`;
   }).join('');
 
-  el.innerHTML = `
-    <div class="card">
-      <div class="card-label">🎯 最优分配建议</div>
-      ${rows}
-      <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:11px;color:var(--muted)">
-        分配后综合 <strong style="color:var(--teal)">${optimalEAR.toFixed(2)}%</strong> p.a.
-        ${currentEAR > 0 ? ` (当前 ${currentEAR.toFixed(2)}%)` : ''}
+  el.innerHTML = `<div class="card" style="margin-bottom:12px">
+    <div class="card-label">🧮 分配模拟器（基于实际 EAR）</div>
+    <div style="display:grid;grid-template-columns:30px 1fr 90px 64px;gap:8px;padding:2px 0 6px;border-bottom:2px solid var(--border)">
+      <div></div>
+      <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase">平台</div>
+      <div style="font-size:9px;font-weight:700;color:var(--muted);text-align:right;text-transform:uppercase">现有金额</div>
+      <div style="font-size:9px;font-weight:700;color:var(--muted);text-align:right;text-transform:uppercase">系统建议</div>
+    </div>
+    ${inputRows}
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0 4px;flex-wrap:wrap;gap:8px">
+      <div>
+        <div style="font-size:11px;color:var(--muted)">你的综合 EAR</div>
+        <div style="font-size:20px;font-weight:900;color:${verdictColor}">${myEAR.toFixed(2)}%</div>
+        <div style="font-size:10px;color:var(--muted)">${fmtRM(myReturn,0)}/年 · 总额 ${fmtRM(simTotal,0)}</div>
       </div>
-    </div>`;
+      <div style="text-align:right">
+        <div style="font-size:11px;color:var(--muted)">优化后可达</div>
+        <div style="font-size:16px;font-weight:800;color:var(--teal)">${optEAR.toFixed(2)}%</div>
+        <div style="font-size:10px;color:var(--muted)">${fmtRM(optReturn,0)}/年 (+${fmtRM(Math.max(0,optReturn-myReturn),0)})</div>
+      </div>
+    </div>
+    <div style="text-align:center;font-size:13px;font-weight:800;color:${verdictColor};padding:6px 0">${verdict}</div>
+    <button id="apply-optimal-btn" style="width:100%;padding:11px;border-radius:10px;border:1.5px solid var(--teal);background:var(--teal-light);color:var(--teal);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:4px">⚡ 查看建议怎么调仓</button>
+    <div style="margin-top:10px;padding:8px 10px;border-radius:8px;background:var(--bg);font-size:11px;color:var(--muted);line-height:1.6">
+      💡 「实际」= 你过去7天真实赚到的 EAR；「设定」= 数据不足，用平台标示利率代替。上方金额默认是你现有余额，可自行调整模拟不同分配方式。
+    </div>
+  </div>`;
+
+  el.querySelectorAll('[data-sim-pid]').forEach(inp => {
+    inp.addEventListener('input', () => { _simAmounts[inp.dataset.simPid] = parseFloat(inp.value) || 0; });
+    inp.addEventListener('blur',  () => _renderOptimalAllocation());
+  });
+  document.getElementById('apply-optimal-btn')?.addEventListener('click', () => {
+    platData.forEach(d => { _simAmounts[d.p.id] = Math.round(optAlloc[d.p.id] || 0); });
+    _renderOptimalAllocation();
+    showToast('✓ 已填入优化建议，实际调仓请到设置页记录');
+  });
 };
 
 // ── ANALYSIS MONTH NAVIGATOR + DAILY INTEREST ─────────────────────────────
