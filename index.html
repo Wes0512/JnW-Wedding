@@ -4,13 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no, maximum-scale=1.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="WedFund">
 <meta name="theme-color" content="#0F6E56">
 <link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
-<link rel="apple-touch-icon" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
+<link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png">
 <title>Wedding Fund Tracker</title>
 <style>
 /* ── VARIABLES ─────────────────────────────────────────────────────────── */
@@ -40,20 +39,14 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif;
   font-size: 16px; max-width: 430px; margin: 0 auto;
   display: flex; flex-direction: column; position: relative;
-  height: 100%; height: 100dvh;
 }
 
 /* ── LAYOUT ────────────────────────────────────────────────────────────── */
-#main-app {
-  flex: 1; display: flex; flex-direction: column;
-  min-height: 0; overflow: hidden;
-}
 #app {
   flex: 1; overflow-y: auto; overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   padding-top: var(--safe-top); scroll-behavior: smooth;
-  padding-bottom: calc(var(--nav-h) + var(--safe-bot) + 16px);
-  min-height: 0;
+  padding-bottom: calc(var(--nav-h) + var(--safe-bot) + 12px);
 }
 .bottom-nav {
   background: var(--card); border-top: 1px solid var(--border);
@@ -340,14 +333,10 @@ body {
       <div class="hero-label">我的总资产</div>
       <div class="hero-val" id="h-total">RM 0</div>
       <div class="hero-row">
-        <div class="hero-stat"><div class="v" id="h-blended">0.00%</div><div class="l">综合 % p.a.</div></div>
+        <div class="hero-stat"><div class="v" id="h-blended">0.00%</div><div class="l">综合 EAR</div></div>
+        <div class="hero-stat"><div class="v" id="h-daily">RM 0.00</div><div class="l">预计日息</div></div>
         <div class="hero-stat"><div class="v" id="h-today-int" style="color:rgba(255,255,255,.4)">—</div><div class="l">今日实际息</div></div>
-        <div class="hero-stat"><div class="v" id="h-month-int" style="color:rgba(255,255,255,.5)">RM 0.00</div><div class="l">本月累计息</div></div>
         <div class="hero-stat"><div class="v" id="h-monthly">RM 0</div><div class="l">预计月息</div></div>
-      </div>
-      <div style="border-top:1px solid rgba(255,255,255,.15);margin-top:12px;padding-top:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
-        <div style="font-size:12px;opacity:.8">本月储蓄 <span id="h-month-progress" style="font-weight:800;color:#FFD700">—</span></div>
-        <div id="h-wedding-countdown" style="font-size:12px;opacity:.8;display:none">💍 <span id="h-days-left" style="font-weight:800;color:#FFD700">—</span> 天</div>
       </div>
     </div>
     <div class="card">
@@ -446,7 +435,7 @@ body {
 
   <!-- INFLOW -->
   <div id="screen-inflow" class="screen">
-    <div class="page-header"><div><div class="page-title">入金分配</div><div class="page-sub">最优配置 · 智能分配建议</div></div></div>
+    <div class="page-header"><div><div class="page-title">入金分配</div><div class="page-sub">新收入 · 智能分配建议</div></div></div>
     <div id="optimal-allocation-section"></div>
     <div class="seg-ctrl" id="inflow-mode-ctrl">
       <button class="seg-btn active" data-mode="salary">💼 月薪</button>
@@ -578,11 +567,16 @@ body {
 
   <!-- ANALYSIS -->
   <div id="screen-analysis" class="screen">
-    <div class="page-header"><div><div class="page-title">分析</div><div class="page-sub">% p.a. 趋势 · 决策建议</div></div></div>
+    <div class="page-header"><div><div class="page-title">分析</div><div class="page-sub">EAR 趋势 · 决策建议</div></div></div>
     <div class="stat-grid" id="stat-grid"></div>
-    <div class="card"><div class="card-label">平台 % p.a. 趋势</div><div id="ear-trend"></div></div>
+    <div class="card"><div class="card-label">平台 EAR 趋势</div><div id="ear-trend"></div></div>
     <div class="card"><div class="card-label">Trailing 实际收益</div><div class="stat-grid" id="trailing-stats" style="margin-bottom:0"></div></div>
+    <div id="actual-vs-expected-section"></div>
+    <div id="interest-cumulative-section"></div>
+    <div id="promo-roi-section"></div>
     <div class="card"><div class="card-label">决策建议</div><div id="decision-advice"></div></div>
+    <div id="wedding-forecast-section"></div>
+    <div id="savings-history-section"></div>
     <div class="card">
       <div class="card-label">婚礼基金模拟</div>
       <div class="inp-group" style="margin-top:6px"><div class="inp-label">我的目标 (RM)</div><div class="inp-prefix"><input class="inp sm" type="number" id="sim-mygoal" inputmode="decimal"></div></div>
@@ -590,8 +584,8 @@ body {
       <div id="sim-result" style="background:var(--teal-light);border-radius:var(--radius-sm);padding:13px;font-size:13px;color:var(--teal);line-height:1.65;border:1px solid rgba(15,110,86,.15)">输入目标查看预测</div>
     </div>
     <div id="daily-interest-section"></div>
-  <div id="rebalance-section"></div>
-  <div id="monthly-report-section"></div>
+    <div id="rebalance-section"></div>
+    <div id="monthly-report-section"></div>
   </div>
 
   <!-- SETTINGS -->
@@ -607,7 +601,7 @@ body {
     <div class="card">
       <div class="card-label">连接伴侣账号 <span id="partner-status-badge"></span></div>
       <div id="partner-section"></div>
-      <button id="migrate-data-btn" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:11px 16px;margin-top:8px;border-radius:10px;border:1.5px solid var(--teal);background:var(--teal-light);color:var(--teal);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">🔄 同步预算数据</button></div>
+    </div>
     <div class="sec-label" style="margin-top:0">平台管理</div>
     <div id="plat-manage-list"></div>
     <button class="btn btn-primary" id="add-plat-btn" style="margin-bottom:16px">+ 添加新平台</button>
@@ -616,14 +610,30 @@ body {
       <div class="set-row"><label>联合总目标</label><div class="rm-prefix"><input class="mini-inp wide" type="number" id="set-joint-goal"></div></div>
       <div class="set-row"><label>我的目标金额</label><div class="rm-prefix"><input class="mini-inp wide" type="number" id="set-my-goal"></div></div>
       <div class="set-row"><label>每月储蓄目标</label><div class="rm-prefix"><input class="mini-inp wide" type="number" id="set-topup"></div></div>
-      <div class="set-row"><label>应急备用金目标</label><div class="rm-prefix"><input class="mini-inp wide" type="number" id="set-emergency" placeholder="5000"></div></div>
-      <div class="set-row"><label>婚礼日期</label><input class="mini-inp" type="date" id="set-wedding-date" style="width:140px"></div>
+      <div class="set-row"><label>紧急备用金</label><div class="rm-prefix"><input class="mini-inp wide" type="number" id="set-emergency"></div></div>
+      <div class="set-row"><label>婚礼日期</label><input class="mini-inp wide" type="date" id="set-wedding-date"></div>
       <button class="btn btn-primary" id="save-goals-btn" style="padding:12px;margin-top:4px">保存目标</button>
+    </div>
+    <div class="card">
+      <div class="card-label">🔄 调仓记录</div>
+      <div class="inp-group" style="margin-top:4px"><div class="inp-label">从</div><select class="inp sm" id="rb-from" style="font-size:13px;font-weight:700"></select></div>
+      <div class="inp-group"><div class="inp-label">到</div><select class="inp sm" id="rb-to" style="font-size:13px;font-weight:700"></select></div>
+      <div class="inp-group"><div class="inp-label">金额 (RM)</div><input class="inp sm" type="number" id="rb-amt" inputmode="decimal"></div>
+      <div class="inp-group"><div class="inp-label">日期</div><input class="inp sm" type="date" id="rb-date"></div>
+      <div class="inp-group"><div class="inp-label">备注（选填）</div><input class="inp sm" type="text" id="rb-note"></div>
+      <div class="inp-group"><div class="inp-label">状态</div>
+        <div class="seg-ctrl" id="rb-status-ctrl">
+          <button class="seg-btn active" data-status="pending">待处理</button>
+          <button class="seg-btn"        data-status="done">已完成</button>
+        </div>
+      </div>
+      <button class="btn btn-primary" id="save-rb-btn" style="padding:12px">+ 保存调仓记录</button>
+      <div style="margin-top:12px" id="rebalance-log-list"></div>
     </div>
     <div class="card">
       <div class="card-label">Promo 管理</div>
       <div class="inp-group" style="margin-top:4px"><div class="inp-label">平台</div><select class="inp sm" id="promo-platform" style="font-size:13px;font-weight:700"></select></div>
-      <div class="inp-group"><div class="inp-label">Promo 利率 % p.a.</div><input class="inp sm" type="number" id="promo-rate" placeholder="4.5" step="0.1" inputmode="decimal"></div>
+      <div class="inp-group"><div class="inp-label">Promo 利率 (%)</div><input class="inp sm" type="number" id="promo-rate" placeholder="4.5" step="0.1" inputmode="decimal"></div>
       <div class="inp-group"><div class="inp-label">到期日</div><input class="inp sm" type="date" id="promo-expiry" style="font-size:14px"></div>
       <div class="inp-group"><div class="inp-label">备注（选填）</div><input class="inp sm" type="text" id="promo-note" placeholder="例：新用户 fresh funds 90天"></div>
       <button class="btn btn-primary" id="add-promo-btn" style="padding:12px">+ 添加 Promo</button>
@@ -632,52 +642,17 @@ body {
     <div class="card">
       <div class="card-label">通知设置</div>
       <div style="display:flex;align-items:center;justify-content:space-between;font-size:14px">
-        <span>每日记录提醒（早上8点）</span>
+        <span>每日记录提醒（晚上8点）</span>
         <button id="notif-btn" style="padding:8px 16px;border-radius:20px;border:1.5px solid var(--teal);background:var(--teal-light);color:var(--teal);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">开启</button>
       </div>
       <div id="notif-status" style="font-size:12px;color:var(--muted);margin-top:8px"></div>
     </div>
     <div class="card">
-      <div class="card-label">调仓记录</div>
-      <div id="rebalance-log-list"></div>
-      <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px">
-        <div class="card-label">记录新调仓</div>
-        <div class="inp-group" style="margin-top:8px">
-          <div class="inp-label">从哪个平台</div>
-          <select class="inp sm" id="rb-from" style="font-size:14px;font-weight:700"></select>
-        </div>
-        <div class="inp-group">
-          <div class="inp-label">转入哪个平台</div>
-          <select class="inp sm" id="rb-to" style="font-size:14px;font-weight:700"></select>
-        </div>
-        <div class="inp-group">
-          <div class="inp-label">转移金额 (RM)</div>
-          <div class="inp-prefix"><input class="inp sm" type="number" id="rb-amt" placeholder="0.00" inputmode="decimal"></div>
-        </div>
-        <div class="inp-group">
-          <div class="inp-label">状态</div>
-          <div class="seg-ctrl" id="rb-status-ctrl">
-            <button class="seg-btn active" data-status="pending">进行中</button>
-            <button class="seg-btn" data-status="done">已完成</button>
-          </div>
-        </div>
-        <div class="inp-group">
-          <div class="inp-label">日期（忘了记录可改日期）</div>
-          <input class="inp sm" type="date" id="rb-date">
-        </div>
-        <div class="inp-group">
-          <div class="inp-label">备注（选填）</div>
-          <input class="inp sm" type="text" id="rb-note" placeholder="例：Versa Promo 到期转出">
-        </div>
-        <button class="btn btn-primary" id="save-rb-btn" style="padding:12px">✓ 保存调仓记录</button>
-      </div>
-    </div>
-    <div class="card">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
         <div class="card-label" style="margin:0">历史记录（最近 60 条）</div>
-        <button id="export-csv-btn" style="font-size:11px;font-weight:700;padding:5px 12px;border-radius:20px;border:1.5px solid var(--teal);background:var(--teal-light);color:var(--teal);cursor:pointer;font-family:inherit">📥 导出 CSV</button>
+        <button class="btn btn-ghost" id="export-csv-btn" style="padding:6px 12px;font-size:11px;width:auto">📥 导出 CSV</button>
       </div>
-      <div id="history-list" style="max-height:320px;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain"></div>
+      <div id="history-list" style="max-height:320px;overflow-y:auto;-webkit-overflow-scrolling:touch;margin-top:8px"></div>
     </div>
   </div>
 
@@ -692,16 +667,13 @@ body {
     </div>
     <div class="inp-group"><div class="inp-label">平台名称</div><input class="inp sm" type="text" id="pm-name" placeholder="例：Versa、GX Bank FD"></div>
     <div class="inp-group"><div class="inp-label">简称（3–4 字）</div><input class="inp sm" type="text" id="pm-short" placeholder="例：VER" maxlength="4" style="text-transform:uppercase"></div>
-    <div class="inp-group"><div class="inp-label">利率 % p.a.</div><input class="inp sm" type="number" id="pm-ear" placeholder="3.50" step="0.1" inputmode="decimal"></div>
-    <div class="inp-group"><div class="inp-label">高息存款上限 (RM) — 选填</div><input class="inp sm" type="number" id="pm-cap" placeholder="例：Versa 30000，SPay 1000，无上限留空" inputmode="decimal"></div>
+    <div class="inp-group"><div class="inp-label">当前 EAR (%)</div><input class="inp sm" type="number" id="pm-ear" placeholder="3.5" step="0.1" inputmode="decimal"></div>
     <div class="inp-group"><div class="inp-label">流动性</div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px" id="pm-liquid-ctrl">
-        <button class="seg-btn active" data-liquid="T+0" style="flex:1;min-width:60px">T+0</button>
-        <button class="seg-btn" data-liquid="T+1" style="flex:1;min-width:60px">T+1</button>
-        <button class="seg-btn" data-liquid="T+2" style="flex:1;min-width:60px">T+2</button>
-        <button class="seg-btn" data-liquid="T+3" style="flex:1;min-width:60px">T+3</button>
-        <button class="seg-btn" data-liquid="T+5" style="flex:1;min-width:60px">T+5</button>
-        <button class="seg-btn" data-liquid="locked" style="flex:1;min-width:60px">锁定</button>
+      <div class="seg-ctrl" id="pm-liquid-ctrl">
+        <button class="seg-btn active" data-liquid="T+0">T+0</button>
+        <button class="seg-btn"        data-liquid="T+1">T+1</button>
+        <button class="seg-btn"        data-liquid="T+2">T+2</button>
+        <button class="seg-btn"        data-liquid="locked">锁定</button>
       </div>
     </div>
     <div class="inp-group"><div class="inp-label">角色</div>
@@ -735,13 +707,32 @@ body {
 <!-- JS modules loaded here by main.js -->
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js';
-import { getFirestore, doc, collection, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, serverTimestamp, getDocs } from 'https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js';
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signOut,
+  onAuthStateChanged
+} from 'https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js';
+import {
+  getFirestore,
+  doc,
+  collection,
+  getDoc,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  onSnapshot,
+  serverTimestamp
+} from 'https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js';
 
 const _fsDoc = (col, id) => doc(col, id);
 
 // ── firebase.js ──────────────────────────────────────────────────────────
+
+// ── firebase.js ──────────────────────────────────────────────────────────
 // Firebase initialisation, Auth, and Firestore instance exports
+
 
 
 
@@ -799,6 +790,7 @@ const fsListen = (ref, cb) => {
   return onSnapshot(ref, cb);
 };
 
+{ serverTimestamp };
 
 // ── AUTH FUNCTIONS ────────────────────────────────────────────────────────
 const signInWithGoogle = async () => {
@@ -833,7 +825,7 @@ const showAuth = () => {
 const showApp = user => {
   document.getElementById('loading-screen').style.display = 'none';
   document.getElementById('auth-screen').style.display    = 'none';
-  document.getElementById('main-app').style.display       = 'flex';
+  document.getElementById('main-app').style.display       = 'block';
   document.getElementById('bottom-nav').style.display     = 'flex';
   // Fill user profile
   document.getElementById('user-name').textContent  = user.displayName || '用户';
@@ -882,6 +874,8 @@ const PLAT_COLORS = [
 ];
 
 
+// ── data.js ──────────────────────────────────────────────────────────
+
 // ── data.js ───────────────────────────────────────────────────────────────
 // App state, Firestore listeners, data calculation helpers
 
@@ -893,20 +887,25 @@ const state = {
   coupleId:   null,
   partnerUid: null,
 
+  // My data
   platforms:   [...DEFAULT_PLATFORMS],
-  entries:     [],
+  entries:     [],   // { id, pid, date, bal, flow, flowDir, autoInt, ts }
   promos:      [],
   customCats:  [],
   settings:    { ...DEFAULT_SETTINGS },
-  weddingDate: null,
 
-  budgetItems:      [],
-  expenses:         [],
+  // Shared couple data
+  budgetItems: [],
+  expenses:    [],
+
+  // Partner data (read-only)
   partnerEntries:   [],
   partnerPlatforms: [],
+
   rebalances: [],
 };
 
+// Active Firestore unsubscribe functions
 let _unsubs = [];
 
 // ── SYNC DOT ──────────────────────────────────────────────────────────────
@@ -947,48 +946,48 @@ const startMyListeners = (onUpdate) => {
   const uid = state.uid;
   if (!uid) return;
 
-  // Track current coupleId to detect changes
-  let _activeCoupleId = null;
-
+  // User doc (settings, coupleId, partnerUid)
   _unsubs.push(fsListen(userRef(uid), snap => {
     if (snap.exists()) {
       const d = snap.data();
       state.settings   = { ...DEFAULT_SETTINGS, ...(d.settings || {}) };
       state.coupleId   = d.coupleId   || null;
       state.partnerUid = d.partnerUid || null;
-
-      // If coupleId changed, restart budget/expense listeners with correct path
-      const newCoupleId = state.coupleId || ('solo_' + uid);
-      if (newCoupleId !== _activeCoupleId) {
-        _activeCoupleId = newCoupleId;
-        startCoupleListeners(onUpdate);
-      }
+      if (state.coupleId) startCoupleListeners(onUpdate);
     }
     onUpdate('settings');
   }));
 
+  // Platforms
   _unsubs.push(fsListen(platCol(uid), snap => {
-    if (!snap.empty) state.platforms = snap.docs.map(d => d.data());
-    else             state.platforms = [...DEFAULT_PLATFORMS];
+    if (!snap.empty) {
+      state.platforms = snap.docs.map(d => d.data())
+        .sort((a, b) => (a.sortOrder ?? 999) - (b.sortOrder ?? 999));
+    } else {
+      state.platforms = [...DEFAULT_PLATFORMS];
+    }
     onUpdate('platforms');
   }));
 
+  // Entries
   _unsubs.push(fsListen(entrCol(uid), snap => {
     state.entries = snap.docs.map(d => d.data());
     onUpdate('entries');
   }));
 
+  // Promos
   _unsubs.push(fsListen(promoCol(uid), snap => {
     state.promos = snap.docs.map(d => d.data());
     onUpdate('promos');
   }));
 
+  // Custom categories
   _unsubs.push(fsListen(catCol(uid), snap => {
     state.customCats = snap.docs.map(d => d.data());
     onUpdate('cats');
   }));
 
-  // Rebalance records listener
+  // Rebalances
   _unsubs.push(fsListen(rbCol(uid), snap => {
     state.rebalances = snap.docs.map(d => d.data());
     onUpdate('rebalances');
@@ -996,26 +995,28 @@ const startMyListeners = (onUpdate) => {
 };
 
 const startCoupleListeners = (onUpdate) => {
-  // Use coupleId if connected, otherwise use personal solo bucket
-  const cid = state.coupleId || ('solo_' + state.uid);
-  if (!cid) return;
+  const { coupleId, partnerUid } = state;
+  if (!coupleId) return;
 
-  _unsubs.push(fsListen(budgetCol(cid), snap => {
+  // Budget items (shared)
+  _unsubs.push(fsListen(budgetCol(coupleId), snap => {
     state.budgetItems = snap.docs.map(d => d.data());
     onUpdate('budget');
   }));
 
-  _unsubs.push(fsListen(expCol(cid), snap => {
+  // Expenses (shared)
+  _unsubs.push(fsListen(expCol(coupleId), snap => {
     state.expenses = snap.docs.map(d => d.data());
     onUpdate('expenses');
   }));
 
-  if (state.partnerUid) {
-    _unsubs.push(fsListen(partEntrCol(state.partnerUid), snap => {
+  // Partner's entries (read-only)
+  if (partnerUid) {
+    _unsubs.push(fsListen(partEntrCol(partnerUid), snap => {
       state.partnerEntries = snap.docs.map(d => d.data());
       onUpdate('partnerEntries');
     }));
-    _unsubs.push(fsListen(partPlatCol(state.partnerUid), snap => {
+    _unsubs.push(fsListen(partPlatCol(partnerUid), snap => {
       state.partnerPlatforms = snap.docs.map(d => d.data());
       onUpdate('partnerPlatforms');
     }));
@@ -1026,52 +1027,63 @@ const startCoupleListeners = (onUpdate) => {
 const ensureUserDoc = async (user) => {
   const snap = await fsGet(userRef(user.uid));
   if (!snap.exists()) {
+    // New user — create doc + default platforms
     await fsSet(userRef(user.uid), {
       uid:         user.uid,
       displayName: user.displayName,
       email:       user.email,
       photoURL:    user.photoURL || '',
       settings:    { ...DEFAULT_SETTINGS },
-  weddingDate: null,
       createdAt:   serverTimestamp(),
     });
     for (const p of DEFAULT_PLATFORMS) {
-      await fsSet(_fsDoc(platCol(user.uid), p.id), p);
+      await fsSet(doc_platCol_item(user.uid, p.id), p);
     }
   }
 };
 
+// Helper — single platform doc ref
+
+const doc_platCol_item = (uid, id) => {
+  // We need a doc ref inside the collection
+  // Re-use Firestore doc() via a workaround
+  const col = _platCol(uid);
+  // col is a CollectionReference; we can get a doc from it
+  // by importing doc from firebase-firestore
+  return _docFromCol(col, id);
+};
+
+// We import doc separately to create doc refs from collection refs
+
+const _docFromCol = (col, id) => fsDoc(col, id);
+
 // ── WRITE HELPERS ─────────────────────────────────────────────────────────
 const savePlatform = async (p) => {
-  await safeWrite(() => fsSet(_fsDoc(platCol(state.uid), p.id), p));
+  await safeWrite(() => fsSet(fsDoc(platCol(state.uid), p.id), p));
 };
 
 const deletePlatform = async (id) => {
-  await fsDel(_fsDoc(platCol(state.uid), id));
+  await fsDel(fsDoc(platCol(state.uid), id));
 };
 
 const saveEntry = async (entry) => {
-  await safeWrite(() => fsSet(_fsDoc(entrCol(state.uid), entry.id), entry));
-};
-
-const deleteEntry = async (id) => {
-  await fsDel(_fsDoc(entrCol(state.uid), id));
+  await safeWrite(() => fsSet(fsDoc(entrCol(state.uid), entry.id), entry));
 };
 
 const savePromo = async (p) => {
-  await safeWrite(() => fsSet(_fsDoc(promoCol(state.uid), p.id), p));
+  await safeWrite(() => fsSet(fsDoc(promoCol(state.uid), p.id), p));
 };
 
 const deletePromo = async (id) => {
-  await fsDel(_fsDoc(promoCol(state.uid), id));
+  await fsDel(fsDoc(promoCol(state.uid), id));
 };
 
 const saveCustomCat = async (cat) => {
-  await fsSet(_fsDoc(catCol(state.uid), cat.id), cat);
+  await fsSet(fsDoc(catCol(state.uid), cat.id), cat);
 };
 
 const deleteCustomCat = async (id) => {
-  await fsDel(_fsDoc(catCol(state.uid), id));
+  await fsDel(fsDoc(catCol(state.uid), id));
 };
 
 const saveUserSettings = async (settings) => {
@@ -1079,106 +1091,49 @@ const saveUserSettings = async (settings) => {
 };
 
 const saveBudgetItem = async (item) => {
-  const cid = state.coupleId || ('solo_' + state.uid);
-  await safeWrite(() => fsSet(_fsDoc(budgetCol(cid), item.id), item));
+  if (!state.coupleId) return;
+  await safeWrite(() => fsSet(fsDoc(budgetCol(state.coupleId), item.id), item));
 };
 
 const deleteBudgetItem = async (id) => {
-  const cid = state.coupleId || ('solo_' + state.uid);
-  await fsDel(_fsDoc(budgetCol(cid), id));
+  if (!state.coupleId) return;
+  await fsDel(fsDoc(budgetCol(state.coupleId), id));
 };
 
 const saveExpense = async (exp) => {
-  const cid = state.coupleId || ('solo_' + state.uid);
-  await safeWrite(() => fsSet(_fsDoc(expCol(cid), exp.id), exp));
+  if (!state.coupleId) return;
+  await safeWrite(() => fsSet(fsDoc(expCol(state.coupleId), exp.id), exp));
 };
 
 const deleteExpense = async (id) => {
-  const cid = state.coupleId || ('solo_' + state.uid);
-  await fsDel(_fsDoc(expCol(cid), id));
+  if (!state.coupleId) return;
+  await fsDel(fsDoc(expCol(state.coupleId), id));
 };
 
-// ── PARTNER ───────────────────────────────────────────────────────────────
+// ── PARTNER CONNECT / DISCONNECT ──────────────────────────────────────────
 const connectPartner = async (partnerUID) => {
-  const uid  = state.uid;
-  const cId  = 'couple_' + [uid, partnerUID].sort().join('_');
-  const soloCid = 'solo_' + uid;
-
-  // Step 1: Create couple doc first (uses auth.uid in coupleId check)
-  await fsSet(coupleRef(cId), {
-    members:   [uid, partnerUID],
-    createdAt: serverTimestamp(),
-  }, true);
-
-  // Step 2: Update my own user doc
-  await fsSet(userRef(uid), {
-    coupleId:   cId,
-    partnerUid: partnerUID,
-  }, true);
-
-  // Step 3: Update partner's user doc (only coupleId + partnerUid fields)
-  await fsSet(userRef(partnerUID), {
-    coupleId:   cId,
-    partnerUid: uid,
-  }, true);
-
-  // Step 4: Migrate solo budget data → couple path
-  try {
-    const { getDocs } = await import(
-      'https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js'
-    );
-    const biSnap = await getDocs(budgetCol(soloCid));
-    const exSnap = await getDocs(expCol(soloCid));
-    for (const d of biSnap.docs) await fsSet(_fsDoc(budgetCol(cId), d.id), d.data());
-    for (const d of exSnap.docs) await fsSet(_fsDoc(expCol(cId),    d.id), d.data());
-    console.log(`Migrated ${biSnap.size} budget items + ${exSnap.size} expenses`);
-  } catch (e) {
-    console.warn('Migration skipped:', e.message);
-  }
-
+  const uid    = state.uid;
+  const cId    = 'couple_' + [uid, partnerUID].sort().join('_');
+  // Update both users
+  await fsSet(userRef(uid),        { coupleId: cId, partnerUid: partnerUID }, true);
+  await fsSet(userRef(partnerUID), { coupleId: cId, partnerUid: uid },        true);
+  // Create couple doc
+  await fsSet(coupleRef(cId), { members: [uid, partnerUID], createdAt: serverTimestamp() }, true);
   state.coupleId   = cId;
   state.partnerUid = partnerUID;
 };
 
-const migrateSoloDataToCouple = async () => {
-  if (!state.coupleId || !state.uid) {
-    console.warn('Cannot migrate: no coupleId or uid');
-    return 0;
-  }
-  const soloCid = 'solo_' + state.uid;
-  try {
-    const { getDocs } = await import(
-      'https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js'
-    );
-    const biSnap = await getDocs(budgetCol(soloCid));
-    const exSnap = await getDocs(expCol(soloCid));
-    let count = 0;
-    for (const d of biSnap.docs) {
-      await fsSet(_fsDoc(budgetCol(state.coupleId), d.id), d.data());
-      count++;
-    }
-    for (const d of exSnap.docs) {
-      await fsSet(_fsDoc(expCol(state.coupleId), d.id), d.data());
-      count++;
-    }
-    return count;
-  } catch (e) {
-    console.warn('Migration error:', e.message);
-    return 0;
-  }
-};
-
 const disconnectPartner = async () => {
   await fsSet(userRef(state.uid), { coupleId: null, partnerUid: null }, true);
-  state.coupleId         = null;
-  state.partnerUid       = null;
-  state.budgetItems      = [];
-  state.expenses         = [];
-  state.partnerEntries   = [];
-  state.partnerPlatforms = [];
+  state.coupleId        = null;
+  state.partnerUid      = null;
+  state.budgetItems     = [];
+  state.expenses        = [];
+  state.partnerEntries  = [];
+  state.partnerPlatforms= [];
 };
 
-// ── HELPERS ───────────────────────────────────────────────────────────────
+// ── DATE HELPERS ──────────────────────────────────────────────────────────
 const todayStr = () => new Date().toISOString().slice(0, 10);
 
 const fmtRM = (n, decimals = 0) =>
@@ -1190,6 +1145,7 @@ const fmtRM = (n, decimals = 0) =>
 const shortInitials = name =>
   name.replace(/[^A-Za-z0-9\u4e00-\u9fa5]/g, '').slice(0, 3).toUpperCase() || '?';
 
+// ── BALANCE CALCULATIONS ──────────────────────────────────────────────────
 const getLatestBal = (pid) => {
   const ents = state.entries
     .filter(e => e.pid === pid)
@@ -1206,11 +1162,13 @@ const blendedEAR = () => {
   let tot = 0, wt = 0;
   state.platforms.forEach(p => {
     const b = getLatestBal(p.id);
-    tot += b; wt += b * getPlatEAR(p);
+    tot += b;
+    wt  += b * getPlatEAR(p);
   });
   return tot > 0 ? wt / tot : 0;
 };
 
+// Auto interest: today_bal - yesterday_bal - net_flow
 const calcAutoInt = (pid, newBal, flow, dir) => {
   const prev    = getLatestBal(pid);
   if (!prev) return 0;
@@ -1219,9 +1177,9 @@ const calcAutoInt = (pid, newBal, flow, dir) => {
   return Math.max(0, newBal - prev - netFlow);
 };
 
+// ── EXPENSE TOTALS ────────────────────────────────────────────────────────
 const totalSpentBy = (who) => {
-  const myUid  = state.uid;
-  const herUid = state.partnerUid;
+  const myUid = state.uid, herUid = state.partnerUid;
   return state.expenses.filter(e => {
     const pb = e.paid_by || 'me';
     if (who === 'me')  return pb === 'me'  || pb === myUid;
@@ -1230,6 +1188,7 @@ const totalSpentBy = (who) => {
   }).reduce((s, e) => s + e.amt, 0);
 };
 
+// ── PARTNER BALANCE ───────────────────────────────────────────────────────
 const partnerTotalBal = () => {
   if (!state.partnerEntries.length) return 0;
   const pids = new Set(state.partnerPlatforms.map(p => p.id));
@@ -1243,21 +1202,23 @@ const partnerTotalBal = () => {
   return tot;
 };
 
+// ── TODAY'S ENTRIES ───────────────────────────────────────────────────────
 const getTodayEntries = () =>
   state.entries.filter(e => e.date === todayStr());
 
+// ── TRAILING EAR (from actual autoInt) ───────────────────────────────────
 const trailingEAR = (pid, days) => {
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - days);
-  const rel = state.entries.filter(
-    e => e.pid === pid && (e.autoInt || 0) > 0 && new Date(e.date) >= cutoff
-  );
-  if (rel.length < 2) return null;
-  const ti = rel.reduce((s, e) => s + (e.autoInt || 0), 0);
-  const ab = rel.reduce((s, e) => s + e.bal, 0) / rel.length;
-  return ab > 0 ? (ti / ab) * (365 / rel.length) * 100 : null;
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate()-days);
+  const allRel = state.entries.filter(e=>e.pid===pid&&new Date(e.date)>=cutoff).sort((a,b)=>a.date.localeCompare(b.date));
+  if (allRel.length<2) return null;
+  const ti=allRel.reduce((s,e)=>s+(e.autoInt||0),0);
+  if (ti<=0) return null;
+  const ab=allRel.reduce((s,e)=>s+e.bal,0)/allRel.length;
+  const spanDays=Math.max(1,(new Date(allRel[allRel.length-1].date)-new Date(allRel[0].date))/86400000);
+  return ab>0?(ti/ab)*(365/spanDays)*100:null;
 };
 
+// ── TRAILING INTEREST TOTAL ───────────────────────────────────────────────
 const trailingInterest = (days) => {
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - days);
@@ -1266,23 +1227,27 @@ const trailingInterest = (days) => {
     .reduce((s, e) => s + (e.autoInt || 0), 0);
 };
 
+// ── MONTHLY INTEREST ──────────────────────────────────────────────────────
 const monthlyInterest = (monthStr) =>
   state.entries
-    .filter(e => e.date.startsWith(monthStr))
+    .filter(e => e.date.startsWith(monthStr) && (e.autoInt || 0) > 0)
     .reduce((s, e) => s + (e.autoInt || 0), 0);
 
-const getAllCats = () => [
-  ...(window._DEFAULT_CATS || []),
-  ...state.customCats,
-];
+// ── ALL CATEGORIES (default + custom) ────────────────────────────────────
+const getAllCats = () => {
+  const { DEFAULT_CATS } = window._APP_CONSTS || {};
+  // Fallback: import directly if not on window
+  return [...(window._DEFAULT_CATS || []), ...state.customCats];
+};
 
 const getCat = (id) =>
   getAllCats().find(c => c.id === id) || { icon: '📦', label: '其他' };
 
+// ── BUDGET CALCULATIONS ───────────────────────────────────────────────────
 const budgetTotals = () => {
   const totalBudget  = state.budgetItems.reduce((s, i) => s + i.budget, 0);
-  const myPaid       = state.expenses.filter(e => { const pb = e.paid_by||'me'; return pb==='me'||pb===state.uid; }).reduce((s,e)=>s+e.amt,0);
-  const herPaid      = state.expenses.filter(e => { const pb = e.paid_by||'me'; return pb==='her'||(state.partnerUid&&pb===state.partnerUid); }).reduce((s,e)=>s+e.amt,0);
+  const myPaid       = state.expenses.filter(e => (e.paid_by || 'me') === 'me').reduce((s, e) => s + e.amt, 0);
+  const herPaid      = totalSpentBy('her');
   const totalPaid    = myPaid + herPaid;
   const totalBalance = state.budgetItems.reduce((s, item) => {
     const paid = state.expenses
@@ -1295,8 +1260,882 @@ const budgetTotals = () => {
 };
 
 
+// ── main.js ──────────────────────────────────────────────────────────
+
+// ── main.js ───────────────────────────────────────────────────────────────
+// App entry point: Auth, navigation, listeners, global refresh
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// ── EXPOSE DEFAULT_CATS globally for data.js getAllCats() ─────────────────
+window._DEFAULT_CATS = DEFAULT_CATS;
+
+// ── ACTIVE SCREEN ─────────────────────────────────────────────────────────
+let _activeScreen = 'home';
+
+// ── NAVIGATION ────────────────────────────────────────────────────────────
+const showScreen = (name) => {
+  // Hide all screens
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  // Show target
+  const target = document.getElementById('screen-' + name);
+  if (target) target.classList.add('active');
+
+  // Update nav buttons
+  document.querySelectorAll('.nav-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.screen === name);
+  });
+
+  // Scroll app to top
+  document.getElementById('app')?.scrollTo({ top: 0 });
+
+  _activeScreen = name;
+
+  // Render the screen
+  switch (name) {
+    case 'home':     renderHome();     break;
+    case 'log':      renderLog();      break;
+    case 'inflow':   renderInflow();   break;
+    case 'expenses':
+      renderExpenses();
+      setExpTab('list');
+      break;
+    case 'analysis': renderAnalysis(); break;
+    case 'settings': renderSettings(); break;
+  }
+};
+
+// ── GLOBAL REFRESH ────────────────────────────────────────────────────────
+// Fired by any module that changes data state
+const onRefresh = () => {
+  // Always re-render whatever screen is active
+  switch (_activeScreen) {
+    case 'home':     renderHome();     break;
+    case 'log':      renderLog();      break;
+    case 'inflow':   renderInflow();   break;
+    case 'expenses': renderExpenses(); break;
+    case 'analysis': renderAnalysis(); break;
+    case 'settings': renderSettings(); break;
+  }
+};
+
+// ── FIRESTORE DATA CALLBACK ───────────────────────────────────────────────
+// Called whenever any Firestore snapshot updates
+const onDataUpdate = (source) => {
+  // Always re-render home (badges, totals)
+  renderHome();
+  // Also re-render the active screen if it depends on the updated data
+  if (_activeScreen !== 'home') onRefresh();
+};
+
+
+// ══════════════════════════════════════════════════════════════════════════
+// EXTRA FUNCTIONS
+// ══════════════════════════════════════════════════════════════════════════
+
+// ── MIGRATE SOLO DATA TO COUPLE ───────────────────────────────────────────
+const migrateSoloDataToCouple = async () => {
+  if (!state.coupleId || !state.uid) return 0;
+  const soloCid = 'solo_' + state.uid;
+  try {
+    const biSnap = await getDocs(budgetCol(soloCid));
+    const exSnap = await getDocs(expCol(soloCid));
+    let count = 0;
+    for (const d of biSnap.docs) { await setDoc(doc(budgetCol(state.coupleId), d.id), d.data()); count++; }
+    for (const d of exSnap.docs) { await setDoc(doc(expCol(state.coupleId), d.id), d.data()); count++; }
+    return count;
+  } catch(e) { console.warn('Migration error:', e.message); return 0; }
+};
+
+const _migrateData = async () => {
+  const n = await migrateSoloDataToCouple();
+  showToast(n > 0 ? `✓ 已迁移 ${n} 条记录` : '没有需要迁移的数据');
+};
+
+// ── DELETE ENTRY ─────────────────────────────────────────────────────────
+const fsDeleteEntry = async (id) => { try { await deleteDoc(doc(entrCol(state.uid), id)); } catch(e){ console.error(e); } };
+const deleteEntry = async (id) => {
+  state.entries = state.entries.filter(e => e.id !== id);
+  await fsDeleteEntry(id);
+  document.dispatchEvent(new CustomEvent('wf:refresh'));
+};
+
+// ── REBALANCE ────────────────────────────────────────────────────────────
+const rbCol = uid => collection(db, 'users', uid, 'rebalances');
+let _rbStatus = 'pending';
+
+const saveRebalance = async (rb) => {
+  const id = rb.id || ('rb_' + Date.now());
+  const data = { ...rb, id };
+  const idx = state.rebalances.findIndex(x => x.id === id);
+  if (idx >= 0) state.rebalances[idx] = data; else state.rebalances.push(data);
+  try { await setDoc(doc(rbCol(state.uid), id), data); } catch(e){ console.error(e); }
+  document.dispatchEvent(new CustomEvent('wf:refresh'));
+};
+
+const deleteRebalance = async (id) => {
+  state.rebalances = state.rebalances.filter(x => x.id !== id);
+  try { await deleteDoc(doc(rbCol(state.uid), id)); } catch(e){ console.error(e); }
+  document.dispatchEvent(new CustomEvent('wf:refresh'));
+};
+
+const saveRebalanceUI = async () => {
+  const from = document.getElementById('rb-from')?.value;
+  const to   = document.getElementById('rb-to')?.value;
+  const amt  = parseFloat(document.getElementById('rb-amt')?.value) || 0;
+  const date = document.getElementById('rb-date')?.value || todayStr();
+  const note = document.getElementById('rb-note')?.value || '';
+  if (!from || !to || amt <= 0) { showToast('请填写完整信息'); return; }
+  await saveRebalance({ from, to, amt, date, note, status: _rbStatus });
+  showToast('已保存调仓记录');
+  ['rb-amt','rb-note'].forEach(id => { const el = document.getElementById(id); if (el) el.value=''; });
+  _renderRebalanceLog();
+};
+
+const _renderRebalanceLog = () => {
+  const el = document.getElementById('rebalance-log-list');
+  if (!el) return;
+  const sorted = [...state.rebalances].sort((a,b) => b.date.localeCompare(a.date));
+  if (!sorted.length) { el.innerHTML = '<div class="empty-state">还没有调仓记录</div>'; return; }
+  el.innerHTML = sorted.map(rb => {
+    const fromN = state.platforms.find(p => p.id === rb.from)?.name || rb.from;
+    const toN   = state.platforms.find(p => p.id === rb.to)?.name   || rb.to;
+    const statusColor = rb.status === 'done' ? 'var(--teal)' : 'var(--amber)';
+    const statusLabel = rb.status === 'done' ? '已完成' : '待处理';
+    return `<div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div style="font-size:12px;font-weight:700">${fromN} → ${toN}</div>
+        <div style="font-size:10px;color:var(--muted)">${rb.date} ${rb.note ? '· '+rb.note : ''}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-weight:800;font-size:13px">${fmtRM(rb.amt,0)}</div>
+        <div style="font-size:10px;color:${statusColor}">${statusLabel}</div>
+      </div>
+    </div>`;
+  }).join('');
+};
+
+const _renderRebalanceAnalysis = () => {
+  const el = document.getElementById('rebalance-section');
+  if (!el) return;
+  if (!state.rebalances.length) { el.innerHTML = ''; return; }
+  const rows = state.rebalances.slice().sort((a,b) => b.date.localeCompare(a.date)).slice(0,10);
+  const totalMoved = rows.reduce((s,r) => s + r.amt, 0);
+  const html = rows.map(rb => {
+    const fromN = state.platforms.find(p => p.id === rb.from)?.name || rb.from;
+    const toN   = state.platforms.find(p => p.id === rb.to)?.name   || rb.to;
+    return `<div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:11px">
+      <span>${rb.date}</span><span>${fromN}→${toN}</span><span style="text-align:right;font-weight:700">${fmtRM(rb.amt,0)}</span>
+    </div>`;
+  }).join('');
+  el.innerHTML = `<div class="card"><div class="card-label">🔄 调仓记录（最近10笔，共${fmtRM(totalMoved,0)}）</div>${html}</div>`;
+};
+
+// ── EXPORT CSV ───────────────────────────────────────────────────────────
+const exportCSV = () => {
+  const rows = [['日期','平台','余额','流水','利息']];
+  [...state.entries].sort((a,b) => a.date.localeCompare(b.date)).forEach(e => {
+    const pn = state.platforms.find(p => p.id === e.pid)?.name || e.pid;
+    rows.push([e.date, pn, e.bal, e.flow||0, e.autoInt||0]);
+  });
+  const csv = '\uFEFF' + rows.map(r => r.join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = `wedfund_export_${todayStr()}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+// ── ALLOCATION SIMULATOR ─────────────────────────────────────────────────
+let _simAmounts = {};
+
+const _getPlatData = () => {
+  const now = new Date();
+  const liqW = { 'T+0':1.00,'T+1':0.98,'T+2':0.96,'T+3':0.93,'T+5':0.88,'locked':0.70 };
+  return state.platforms.map(p => {
+    const bal      = getLatestBal(p.id);
+    const t7       = trailingEAR(p.id, 7);
+    const setEAR   = getPlatEAR(p);
+    const effEAR   = t7 != null ? t7 : setEAR;
+    const hasPromo = state.promos.find(pr => pr.platform === p.id && new Date(pr.expiry) >= now);
+    const promoEAR = hasPromo ? parseFloat(hasPromo.rate) : null;
+    const finalEAR = promoEAR || effEAR;
+    const liqDays  = p.liquid === 'T+0' ? 0
+                   : p.liquid === 'T+1' ? 1
+                   : p.liquid === 'T+2' ? 2
+                   : p.liquid === 'T+3' ? 3
+                   : p.liquid === 'T+5' ? 5
+                   : 999;
+    const score    = finalEAR * (liqW[p.liquid] || 0.90);
+    return { p, bal, effEAR, setEAR, finalEAR, liqDays, hasPromo, promoEAR, t7, score };
+  }).sort((a, b) => b.score - a.score);
+};
+
+const _blendedEARof = (alloc, platData) => {
+  const tot = Object.values(alloc).reduce((s,v) => s+v, 0);
+  if (tot <= 0) return 0;
+  let wt = 0;
+  platData.forEach(d => { wt += (alloc[d.p.id]||0) * d.finalEAR; });
+  return wt / tot;
+};
+
+const _calcOptimal = (platData, total) => {
+  const alloc = {};
+  platData.forEach(d => alloc[d.p.id] = 0);
+  let remaining = total;
+  const emergencyTarget = state.settings.emergency_fund || 5000;
+  const roomLeft = d => Math.max(0, (d.p.cap || Infinity) - alloc[d.p.id]);
+
+  const byScore = [...platData].filter(x => x.liqDays < 999).sort((a,b) => b.score - a.score);
+
+  const emPlats = byScore.filter(x => x.liqDays <= 1);
+  let emLeft = Math.min(emergencyTarget, remaining);
+  for (const d of emPlats) {
+    if (emLeft <= 0) break;
+    const add = Math.min(emLeft, roomLeft(d), remaining);
+    alloc[d.p.id] += add; emLeft -= add; remaining -= add;
+  }
+
+  let pass = 0;
+  while (remaining > 1 && pass < 3) {
+    let changed = false;
+    for (const d of byScore) {
+      if (remaining <= 0) break;
+      const maxHere = Math.min(d.p.cap || Infinity, total * 0.50);
+      const add = Math.max(0, Math.min(maxHere - alloc[d.p.id], roomLeft(d), remaining));
+      if (add > 0) { alloc[d.p.id] += add; remaining -= add; changed = true; }
+    }
+    if (!changed) break;
+    pass++;
+  }
+
+  if (remaining > 0 && byScore.length) { alloc[byScore[0].p.id] += remaining; }
+  return alloc;
+};
+
+const _renderOptimalAllocation = () => {
+  const el = document.getElementById('optimal-allocation-section');
+  if (!el) return;
+  const platData = _getPlatData();
+  if (!platData.length) { el.innerHTML = ''; return; }
+
+  const amt = parseFloat(document.getElementById('inflow-amt')?.value) || 0;
+  if (amt <= 0) { el.innerHTML = ''; return; }
+
+  const alloc      = _calcOptimal(platData, amt);
+  const optimalEAR = _blendedEARof(alloc, platData);
+  const currentEAR = blendedEAR();
+
+  const rows = platData.filter(d => (alloc[d.p.id]||0) > 0.5).map(d => {
+    const amtHere = alloc[d.p.id];
+    const pct = (amtHere / amt * 100).toFixed(0);
+    return `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px">
+      <span>${d.p.name} <span style="color:var(--muted);font-size:10px">(${d.finalEAR.toFixed(2)}% · ${d.p.liquid})</span></span>
+      <span style="font-weight:800">${fmtRM(amtHere,0)} <span style="color:var(--muted);font-size:10px">(${pct}%)</span></span>
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="card">
+      <div class="card-label">🎯 最优分配建议</div>
+      ${rows}
+      <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:11px;color:var(--muted)">
+        分配后综合 <strong style="color:var(--teal)">${optimalEAR.toFixed(2)}%</strong> p.a.
+        ${currentEAR > 0 ? ` (当前 ${currentEAR.toFixed(2)}%)` : ''}
+      </div>
+    </div>`;
+};
+
+// ── ANALYSIS MONTH NAVIGATOR + DAILY INTEREST ─────────────────────────────
+let _analysisMk = todayStr().slice(0,7);
+
+const _changeAnalysisMonth = (delta) => {
+  const [y, m] = _analysisMk.split('-').map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  _analysisMk = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  _renderDailyInterest();
+};
+
+const _renderDailyInterest = () => {
+  const el = document.getElementById('daily-interest-section');
+  if (!el) return;
+
+  const monthEntries = state.entries.filter(e => e.date.startsWith(_analysisMk) && (e.autoInt||0) !== 0);
+  const byDate = {};
+  monthEntries.forEach(e => { byDate[e.date] = (byDate[e.date]||0) + (e.autoInt||0); });
+  const dates = Object.keys(byDate).sort();
+  const monthTotal = dates.reduce((s,d) => s + byDate[d], 0);
+
+  const sortedDates = dates.slice().reverse();
+  const list = sortedDates.length > 0
+    ? `<div style="max-height:220px;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain">` +
+      sortedDates.map(d => {
+        const val = byDate[d];
+        const dayEntries = monthEntries.filter(e => e.date === d && e.autoInt > 0);
+        const detail = dayEntries.map(e => {
+          const pl = state.platforms.find(x => x.id === e.pid);
+          return pl ? `${pl.short||pl.name} +${fmtRM(e.autoInt,2)}` : '';
+        }).filter(Boolean).join(' · ');
+        return `<div class="report-row">
+          <span style="color:var(--muted)">${d.slice(5).replace('-','/')}</span>
+          <div style="text-align:right">
+            <div style="font-weight:800;color:${val>0?'var(--teal)':'var(--muted)'}">${val>0?'+'+fmtRM(val,2):'RM 0.00'}</div>
+            ${detail ? `<div style="font-size:10px;color:var(--muted)">${detail}</div>` : ''}
+          </div>
+        </div>`;
+      }).join('') + `</div>`
+    : '<div class="empty-state">本月没有利息记录</div>';
+
+  const [y, m] = _analysisMk.split('-');
+  el.innerHTML = `
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <button class="icon-btn" id="analysis-mk-prev" style="padding:2px 10px">‹</button>
+        <div class="card-label" style="margin:0">${y}年${parseInt(m)}月 每日利息 · 共${fmtRM(monthTotal,2)}</div>
+        <button class="icon-btn" id="analysis-mk-next" style="padding:2px 10px">›</button>
+      </div>
+      ${list}
+    </div>`;
+
+  document.getElementById('analysis-mk-prev')?.addEventListener('click', () => _changeAnalysisMonth(-1));
+  document.getElementById('analysis-mk-next')?.addEventListener('click', () => _changeAnalysisMonth(1));
+};
+
+// ── ACTUAL vs EXPECTED (30d) ───────────────────────────────────────────────
+const _renderActualVsExpected = () => {
+  const el = document.getElementById('actual-vs-expected-section');
+  if (!el) return;
+
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 30);
+  const cutoffStr = cutoff.toISOString().slice(0,10);
+
+  const rows = state.platforms.map(p => {
+    const entries = state.entries
+      .filter(e => e.pid === p.id && e.date >= cutoffStr)
+      .sort((a,b) => a.date.localeCompare(b.date));
+    if (entries.length < 2) return null;
+
+    const actualInt  = entries.reduce((s,e) => s + (e.autoInt||0), 0);
+    const avgBal     = entries.reduce((s,e) => s + e.bal, 0) / entries.length;
+    const days       = Math.max(1, (new Date(entries[entries.length-1].date) - new Date(entries[0].date)) / 86400000);
+    const expectedInt = avgBal * getPlatEAR(p) / 100 / 365 * days;
+    const diff       = actualInt - expectedInt;
+    const pct        = expectedInt > 0 ? (actualInt / expectedInt * 100) : 0;
+
+    return { p, actualInt, expectedInt, diff, pct, avgBal, days };
+  }).filter(Boolean);
+
+  if (!rows.length) {
+    el.innerHTML = `<div class="card"><div class="card-label">实际 vs 预期收益（30天）</div><div class="empty-state">需要至少2天记录才能计算</div></div>`;
+    return;
+  }
+
+  const totalActual   = rows.reduce((s,r) => s + r.actualInt, 0);
+  const totalExpected = rows.reduce((s,r) => s + r.expectedInt, 0);
+  const totalDiff     = totalActual - totalExpected;
+
+  const rowsHtml = rows.map(r => {
+    const pct = Math.min(200, r.pct);
+    const barColor = r.pct >= 95 ? 'var(--teal)' : r.pct >= 80 ? 'var(--amber)' : 'var(--red)';
+    const diffStr  = r.diff >= 0 ? `+${fmtRM(r.diff,2)}` : fmtRM(r.diff,2);
+    return `
+      <div style="margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+          <span style="font-weight:700">${r.p.name}</span>
+          <span style="color:var(--muted)">实际 <strong style="color:${barColor}">${fmtRM(r.actualInt,2)}</strong> / 预期 ${fmtRM(r.expectedInt,2)}
+            <strong style="color:${r.diff>=0?'var(--teal)':'var(--red)'}"> (${diffStr})</strong>
+          </span>
+        </div>
+        <div style="height:8px;background:var(--border);border-radius:20px;overflow:hidden">
+          <div style="height:100%;width:${pct}%;background:${barColor};border-radius:20px;transition:width .5s;max-width:100%"></div>
+        </div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px">达成率 ${r.pct.toFixed(0)}% · 均余额 ${fmtRM(r.avgBal,0)} · ${Math.round(r.days)}天</div>
+      </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px">
+        <div class="card-label" style="margin:0">实际 vs 预期收益（30天）</div>
+        <div style="text-align:right;font-size:12px">
+          <span style="color:var(--muted)">总实际 </span><strong style="color:var(--teal)">${fmtRM(totalActual,2)}</strong>
+          <span style="color:var(--muted)"> / 预期 </span><strong>${fmtRM(totalExpected,2)}</strong>
+          <strong style="color:${totalDiff>=0?'var(--teal)':'var(--red)'}"> (${totalDiff>=0?'+':''}${fmtRM(totalDiff,2)})</strong>
+        </div>
+      </div>
+      ${rowsHtml}
+      <div style="font-size:11px;color:var(--muted);padding-top:8px;border-top:1px solid var(--border)">
+        💡 低于100%可能因为：周末无息、有出入金、或平台实际利率低于设定值
+      </div>
+    </div>`;
+};
+
+// ── CUMULATIVE INTEREST CHART ─────────────────────────────────────────────
+const _renderInterestCumulative = () => {
+  const el = document.getElementById('interest-cumulative-section');
+  if (!el) return;
+
+  const allEntries = [...state.entries]
+    .filter(e => (e.autoInt||0) > 0)
+    .sort((a,b) => a.date.localeCompare(b.date));
+
+  if (!allEntries.length) {
+    el.innerHTML = `<div class="card"><div class="card-label">💰 累计利息收入</div><div class="empty-state">记录余额后自动生成</div></div>`;
+    return;
+  }
+
+  const byMonth = {};
+  allEntries.forEach(e => {
+    const mk = e.date.slice(0,7);
+    if (!byMonth[mk]) byMonth[mk] = 0;
+    byMonth[mk] += (e.autoInt||0);
+  });
+  const months   = Object.keys(byMonth).sort();
+  const total    = allEntries.reduce((s,e) => s + (e.autoInt||0), 0);
+  const avgMonth = months.length > 0 ? total / months.length : 0;
+
+  const maxVal = Math.max(...months.map(m => byMonth[m]), 0.01);
+  const barW   = Math.max(20, Math.min(40, Math.floor(260 / Math.max(months.length,1))));
+  const chartW = Math.max(280, months.length * (barW + 6));
+
+  const bars = months.map((mk, i) => {
+    const val = byMonth[mk];
+    const h   = Math.max(4, Math.round(val / maxVal * 70));
+    const x   = i * (barW + 6);
+    const lbl = mk.slice(5);
+    return `<g>
+      <rect x="${x}" y="${70-h}" width="${barW}" height="${h}" rx="4" fill="var(--teal-mid)" opacity="0.85"/>
+      <text x="${x+barW/2}" y="85" text-anchor="middle" font-size="9" fill="var(--muted)">${lbl}</text>
+      ${h > 20 ? `<text x="${x+barW/2}" y="${70-h-3}" text-anchor="middle" font-size="8" fill="var(--teal)">${fmtRM(val,0).replace('RM ','')}</text>` : ''}
+    </g>`;
+  }).join('');
+
+  let running = 0;
+  const cumLine = months.map((mk, i) => {
+    running += byMonth[mk];
+    const x = i * (barW + 6) + barW/2;
+    const y = 70 - Math.round(running / (total||1) * 70);
+    return i === 0 ? `M${x},${y}` : `L${x},${y}`;
+  }).join(' ');
+
+  el.innerHTML = `
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px">
+        <div class="card-label" style="margin:0">💰 累计利息收入</div>
+        <div style="text-align:right">
+          <div style="font-size:18px;font-weight:900;color:var(--teal)">${fmtRM(total,2)}</div>
+          <div style="font-size:10px;color:var(--muted)">月均 ${fmtRM(avgMonth,2)}</div>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <svg width="${chartW}" height="95" style="display:block;min-width:100%">
+          ${bars}
+          ${months.length > 1 ? `<path d="${cumLine}" fill="none" stroke="var(--amber)" stroke-width="2" stroke-dasharray="4,2"/>` : ''}
+        </svg>
+      </div>
+      <div style="display:flex;gap:16px;font-size:11px;color:var(--muted);margin-top:4px">
+        <span><span style="display:inline-block;width:10px;height:10px;background:var(--teal-mid);border-radius:2px;margin-right:4px"></span>月利息</span>
+        <span><span style="display:inline-block;width:16px;height:2px;background:var(--amber);border-bottom:2px dashed var(--amber);margin-right:4px;vertical-align:middle"></span>累计趋势</span>
+      </div>
+    </div>`;
+};
+
+// ── PROMO ROI ──────────────────────────────────────────────────────────────
+const _renderPromoROI = () => {
+  const el = document.getElementById('promo-roi-section');
+  if (!el) return;
+
+  const now = new Date();
+  const allPromos = state.promos;
+  if (!allPromos.length) { el.innerHTML = ''; return; }
+
+  const roiRows = allPromos.map(pr => {
+    const pn      = state.platforms.find(x => x.id === pr.platform)?.name || pr.platform;
+    const setEAR  = getPlatEAR(state.platforms.find(x => x.id === pr.platform) || {ear:3.0});
+    const promoEAR= parseFloat(pr.rate);
+    const extra   = promoEAR - setEAR;
+    const isActive= new Date(pr.expiry) >= now;
+    const dl      = Math.ceil((new Date(pr.expiry) - now) / 86400000);
+
+    const platEntries = state.entries.filter(e => e.pid === pr.platform);
+    const promoStart  = pr.ts ? new Date(pr.ts) : new Date(pr.expiry);
+    const actualInt   = platEntries
+      .filter(e => new Date(e.date) >= promoStart && new Date(e.date) <= new Date(pr.expiry))
+      .reduce((s,e) => s + (e.autoInt||0), 0);
+    const avgBal      = platEntries.length ? platEntries.reduce((s,e)=>s+e.bal,0)/platEntries.length : 0;
+
+    return { pr, pn, promoEAR, setEAR, extra, isActive, dl, actualInt, avgBal };
+  }).filter(r => r.extra > 0);
+
+  if (!roiRows.length) { el.innerHTML = ''; return; }
+
+  const html = roiRows.map(r => `
+    <div style="padding:10px 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-weight:800;font-size:13px">${r.pn}</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px">
+            Promo ${r.promoEAR}% vs 常规 ${r.setEAR.toFixed(1)}% = 额外 <strong style="color:var(--purple)">+${r.extra.toFixed(1)}%</strong>
+          </div>
+        </div>
+        <div style="text-align:right">
+          ${r.isActive
+            ? `<span style="font-size:11px;font-weight:700;color:var(--purple)">还有 ${r.dl} 天</span>`
+            : `<span style="font-size:11px;color:var(--muted)">已结束</span>`}
+          ${r.actualInt > 0 ? `<div style="font-size:12px;font-weight:800;color:var(--teal)">+${fmtRM(r.actualInt,2)}</div>` : ''}
+        </div>
+      </div>
+      ${r.avgBal > 0 ? `
+        <div style="font-size:10px;color:var(--muted);margin-top:4px">
+          均余额 ${fmtRM(r.avgBal,0)} · 
+          预估Promo期额外收益：${fmtRM(r.avgBal * r.extra/100/365 * 30,2)}/月
+        </div>` : ''}
+    </div>`).join('');
+
+  el.innerHTML = `
+    <div class="card">
+      <div class="card-label">🎯 Promo ROI 追踪</div>
+      ${html}
+    </div>`;
+};
+
+// ── WEDDING FUND FORECAST ──────────────────────────────────────────────────
+const _renderWeddingForecast = () => {
+  const el = document.getElementById('wedding-forecast-section');
+  if (!el) return;
+
+  const myGoal   = state.settings.my_goal    || 50000;
+  const topup    = state.settings.topup      || 2000;
+  const wDate    = state.settings.wedding_date;
+  const total    = totalBal();
+  const mySpent  = totalSpentBy('me');
+  const ear      = blendedEAR();
+  const gap      = Math.max(0, myGoal - total - mySpent);
+  const mthInt   = total * ear / 100 / 12;
+
+  const points = [];
+  let bal = total;
+  for (let m = 0; m <= 60; m++) {
+    points.push({ m, bal: Math.round(bal) });
+    if (bal + mySpent >= myGoal) break;
+    bal = bal * (1 + ear/100/12) + topup;
+  }
+
+  const reachMonth = points.find(p => p.bal + mySpent >= myGoal);
+  const months     = reachMonth ? reachMonth.m : null;
+
+  const maxBal  = Math.max(myGoal * 1.05, points[points.length-1].bal);
+  const chartW  = 280;
+  const chartH  = 100;
+  const ptPath  = points.map((p, i) => {
+    const x = Math.round(i / Math.max(points.length-1,1) * chartW);
+    const y = chartH - Math.round((p.bal + mySpent) / maxBal * chartH);
+    return i === 0 ? `M${x},${y}` : `L${x},${y}`;
+  }).join(' ');
+
+  const goalY = chartH - Math.round(myGoal / maxBal * chartH);
+
+  const etaStr = months == null ? '超过5年'
+    : months < 12 ? `${months} 个月`
+    : `${Math.floor(months/12)} 年 ${months%12 ? months%12+'个月' : ''}`;
+
+  const wDateEta = wDate ? (() => {
+    const wd = new Date(wDate);
+    const mLeft = Math.round((wd - new Date()) / 86400000 / 30);
+    const projBal = points.find(p => p.m >= mLeft);
+    const projTotal = (projBal?.bal || total) + mySpent;
+    const projPct = Math.min(100, projTotal / myGoal * 100);
+    return { mLeft, projTotal, projPct };
+  })() : null;
+
+  el.innerHTML = `
+    <div class="card">
+      <div class="card-label">📈 婚礼基金预测</div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+        <div>
+          <div style="font-size:11px;color:var(--muted)">目标 ${fmtRM(myGoal)}</div>
+          <div style="font-size:11px;color:var(--muted)">现在 ${fmtRM(total+mySpent)} (${Math.min(100,(total+mySpent)/myGoal*100).toFixed(1)}%)</div>
+          <div style="font-size:11px;color:var(--muted)">月储 ${fmtRM(topup)} + 利息 ${fmtRM(mthInt,0)}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:11px;color:var(--muted)">预计达标</div>
+          <div style="font-size:18px;font-weight:900;color:${gap<=0?'var(--teal)':'var(--text)'}">${gap<=0?'已达标 🎉':etaStr}</div>
+          ${wDateEta ? `<div style="font-size:10px;color:var(--muted)">婚礼时预计 ${wDateEta.projPct.toFixed(0)}%</div>` : ''}
+        </div>
+      </div>
+      <svg width="100%" height="${chartH+20}" viewBox="0 0 ${chartW} ${chartH+20}" style="display:block">
+        <line x1="0" y1="${goalY}" x2="${chartW}" y2="${goalY}" stroke="var(--amber)" stroke-width="1.5" stroke-dasharray="6,3"/>
+        <text x="${chartW-2}" y="${goalY-3}" text-anchor="end" font-size="9" fill="var(--amber)">目标</text>
+        <path d="${ptPath}" fill="none" stroke="var(--teal-mid)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        ${wDateEta && wDateEta.mLeft <= points.length ? (() => {
+          const wx = Math.round(Math.min(wDateEta.mLeft, points.length-1) / Math.max(points.length-1,1) * chartW);
+          return `<line x1="${wx}" y1="0" x2="${wx}" y2="${chartH}" stroke="var(--coral)" stroke-width="1.5" stroke-dasharray="4,2"/>
+                  <text x="${wx+3}" y="12" font-size="8" fill="var(--coral)">婚礼</text>`;
+        })() : ''}
+        <text x="0" y="${chartH+14}" font-size="9" fill="var(--muted)">现在</text>
+        ${months ? `<text x="${chartW}" y="${chartH+14}" text-anchor="end" font-size="9" fill="var(--teal)">${etaStr}</text>` : ''}
+      </svg>
+    </div>`;
+};
+
+// ── MONTHLY SAVINGS HISTORY ────────────────────────────────────────────────
+const _renderSavingsHistory = () => {
+  const el = document.getElementById('savings-history-section');
+  if (!el) return;
+
+  const topup = state.settings.topup || 2000;
+  const now   = new Date();
+
+  const months = [];
+  for (let m = 5; m >= 0; m--) {
+    const d   = new Date(now.getFullYear(), now.getMonth() - m, 1);
+    const mk  = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    const lbl = d.toLocaleDateString('zh-MY', { month: 'short' });
+
+    const mEntries = state.entries.filter(e => e.date.startsWith(mk));
+    if (!mEntries.length && m > 0) continue;
+
+    const pids     = [...new Set(state.entries.map(e => e.pid))];
+    const endBal   = pids.reduce((s, pid) => {
+      const pe = mEntries.filter(e => e.pid === pid).sort((a,b) => a.date.localeCompare(b.date));
+      return s + (pe.length ? pe[pe.length-1].bal : 0);
+    }, 0);
+    const prevD    = new Date(d.getFullYear(), d.getMonth()-1, 1);
+    const prevMk   = `${prevD.getFullYear()}-${String(prevD.getMonth()+1).padStart(2,'0')}`;
+    const prevEntries = state.entries.filter(e => e.date.startsWith(prevMk));
+    const startBal = pids.reduce((s, pid) => {
+      const pe = prevEntries.filter(e => e.pid === pid).sort((a,b) => a.date.localeCompare(b.date));
+      return s + (pe.length ? pe[pe.length-1].bal : 0);
+    }, 0);
+
+    const saved  = Math.max(0, endBal - startBal);
+    const pct    = topup > 0 ? Math.min(100, saved / topup * 100) : 0;
+    const met    = saved >= topup * 0.9;
+    const mint   = monthlyInterest(mk);
+
+    months.push({ mk, lbl, saved, pct, met, mint, endBal });
+  }
+
+  if (!months.length) {
+    el.innerHTML = `<div class="card"><div class="card-label">📅 月储蓄达成率</div><div class="empty-state">需要至少1个月记录</div></div>`;
+    return;
+  }
+
+  const rows = months.map(m => {
+    const col = m.met ? 'var(--teal)' : m.pct > 50 ? 'var(--amber)' : 'var(--red)';
+    return `
+      <div style="margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px">
+          <span style="font-weight:700;color:var(--muted)">${m.lbl}</span>
+          <div style="text-align:right">
+            <span style="font-weight:800;color:${col}">${fmtRM(m.saved,0)}</span>
+            <span style="color:var(--muted);font-size:10px"> / ${fmtRM(topup,0)} (${m.pct.toFixed(0)}%)</span>
+            ${m.mint > 0 ? `<span style="color:var(--teal);font-size:10px"> +${fmtRM(m.mint,2)} 息</span>` : ''}
+          </div>
+        </div>
+        <div style="height:7px;background:var(--border);border-radius:20px;overflow:hidden">
+          <div style="height:100%;width:${m.pct}%;background:${col};border-radius:20px;transition:width .5s"></div>
+        </div>
+      </div>`;
+  }).join('');
+
+  const metCount = months.filter(m => m.met).length;
+
+  el.innerHTML = `
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px">
+        <div class="card-label" style="margin:0">📅 月储蓄达成率</div>
+        <div style="font-size:11px;color:var(--muted)">${metCount}/${months.length} 个月达标</div>
+      </div>
+      ${rows}
+      <div style="font-size:11px;color:var(--muted);padding-top:8px;border-top:1px solid var(--border)">
+        目标：每月储蓄 ${fmtRM(topup,0)}（设置里可修改）
+      </div>
+    </div>`;
+};
+
+// ── COLLAPSIBLE CARDS + NUMBER ANIMATION ──────────────────────────────────
+const _collapsedCards = {};
+const _makeCardCollapsible = (cardEl, key, defaultOpen = true) => {
+  if (!cardEl) return;
+  const label = cardEl.querySelector('.card-label');
+  if (!label || label.dataset.collapsible === '1') return;
+  label.dataset.collapsible = '1';
+  label.style.cursor = 'pointer';
+  label.style.userSelect = 'none';
+  const isOpen = _collapsedCards[key] !== undefined ? _collapsedCards[key] : defaultOpen;
+  _collapsedCards[key] = isOpen;
+  const body = document.createElement('div');
+  while (label.nextSibling) body.appendChild(label.nextSibling);
+  cardEl.appendChild(body);
+  body.style.display = isOpen ? '' : 'none';
+  const arrow = document.createElement('span');
+  arrow.textContent = isOpen ? ' ▾' : ' ▸';
+  arrow.style.fontSize = '11px';
+  label.appendChild(arrow);
+  label.addEventListener('click', () => {
+    _collapsedCards[key] = !_collapsedCards[key];
+    body.style.display = _collapsedCards[key] ? '' : 'none';
+    arrow.textContent = _collapsedCards[key] ? ' ▾' : ' ▸';
+  });
+};
+
+const _animateNumber = (el, target, decimals = 0, duration = 600) => {
+  if (!el) return;
+  const start = parseFloat(el.dataset.rawVal || '0') || 0;
+  const startTime = performance.now();
+  const step = (now) => {
+    const t = Math.min(1, (now - startTime) / duration);
+    const eased = 1 - Math.pow(1 - t, 3);
+    const val = start + (target - start) * eased;
+    el.textContent = fmtRM(val, decimals);
+    if (t < 1) requestAnimationFrame(step); else el.dataset.rawVal = target;
+  };
+  requestAnimationFrame(step);
+};
+
+
+// ── FUNCTION ALIASES ────────────────────────────────────────────────────
+const fsSavePlatform=savePlatform, fsDeletePlatform=deletePlatform,
+fsSaveEntry=saveEntry,
+fsSavePromo=savePromo, fsDeletePromo=deletePromo,
+fsSaveBudgetItem=saveBudgetItem, fsDeleteBudgetItem=deleteBudgetItem,
+fsSaveExpense=saveExpense, fsDeleteExpense=deleteExpense,
+fsSaveCustomCat=saveCustomCat, fsDeleteCustomCat=deleteCustomCat,
+fsConnectPartner=connectPartner, fsDisconnectPartner=disconnectPartner,
+fsMigrate=migrateSoloDataToCouple;
+
+// ── AUTH STATE ────────────────────────────────────────────────────────────
+onAuthChange(async (user) => {
+  if (user) {
+    // ── Logged in ──────────────────────────────────────────────────────
+    state.uid = user.uid;
+    showApp(user);
+
+    // Ensure Firestore user doc + default platforms exist
+    await ensureUserDoc(user);
+
+    // Start real-time listeners
+    startMyListeners(onDataUpdate);
+
+    // Initial render
+    renderHome();
+    renderSettings();
+
+    // Schedule daily notification if permission already granted
+    scheduleNotification();
+
+  } else {
+    // ── Logged out ─────────────────────────────────────────────────────
+    state.uid        = null;
+    state.coupleId   = null;
+    state.partnerUid = null;
+    state.platforms  = [...DEFAULT_PLATFORMS];
+    state.entries    = [];
+    state.promos     = [];
+    state.customCats = [];
+    state.settings   = { my_goal: 50000, joint_goal: 120000, topup: 2000 };
+    state.budgetItems = [];
+    state.expenses    = [];
+    state.partnerEntries   = [];
+    state.partnerPlatforms = [];
+
+    stopListeners();
+    showAuth();
+  }
+});
+
+// ── BIND NAV BUTTONS ──────────────────────────────────────────────────────
+const bindNav = () => {
+  document.querySelectorAll('.nav-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (btn.dataset.screen) showScreen(btn.dataset.screen);
+    });
+  });
+
+  // Gear icon on home → settings
+  document.getElementById('go-settings-btn')?.addEventListener('click', () => {
+    showScreen('settings');
+  });
+};
+
+// ── SIGN IN BUTTON ────────────────────────────────────────────────────────
+const bindAuth = () => {
+  document.getElementById('google-signin-btn')?.addEventListener('click', async () => {
+    document.getElementById('auth-loading').style.display = 'block';
+    try {
+      await signInWithGoogle();
+    } catch (e) {
+      document.getElementById('auth-loading').style.display = 'none';
+      showToast('登入失败，请重试');
+      console.error(e);
+    }
+  });
+
+  document.getElementById('signout-btn')?.addEventListener('click', async () => {
+    if (!confirm('确定登出？')) return;
+    stopListeners();
+    await signOutUser();
+  });
+};
+
+// ── SET TODAY'S DATE ──────────────────────────────────────────────────────
+const setTodayDate = () => {
+  const el = document.getElementById('today-date');
+  if (el) el.textContent = new Date().toLocaleDateString('zh-MY', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+  });
+};
+
+// ── GLOBAL wf:refresh LISTENER ────────────────────────────────────────────
+document.addEventListener('wf:refresh', onRefresh);
+
+// ── SERVICE WORKER ────────────────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(err => {
+    console.warn('SW registration failed:', err);
+  });
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+const init = () => {
+  setTodayDate();
+  bindNav();
+  bindAuth();
+  bindLogListeners();
+  bindExpensesListeners();
+  bindAnalysisListeners();
+  bindSettingsListeners();
+  bindInflowListeners();
+};
+
+// Run init when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
+
+
+// ── ui-home.js ──────────────────────────────────────────────────────────
+
 // ── ui-home.js ────────────────────────────────────────────────────────────
 // Renders everything on the home screen
+
 
 
 // ── MAIN RENDER ───────────────────────────────────────────────────────────
@@ -1309,6 +2148,12 @@ const renderHome = () => {
   _renderPlatformOverview();
   _renderPromoAlerts();
   _renderYieldAlerts();
+
+  // Batch 3: make platform status + budget progress cards collapsible
+  const platCard = document.getElementById('platform-overview')?.closest('.card');
+  if (platCard) _makeCardCollapsible(platCard, 'home-platform-status', true);
+  const budgetCard = document.getElementById('home-budget-card');
+  if (budgetCard && budgetCard.style.display !== 'none') _makeCardCollapsible(budgetCard, 'home-budget-progress', true);
 };
 
 // ── DATE ──────────────────────────────────────────────────────────────────
@@ -1326,10 +2171,10 @@ const _renderHero = () => {
   const daily   = total * ear / 100 / 365;
   const monthly = total * ear / 100 / 12;
 
-  _set('h-total',   fmtRM(total, 2));
+  _animateNumber(document.getElementById('h-total'),   total,   2);
   _set('h-blended', ear.toFixed(2) + '%');
-  _set('h-daily',   fmtRM(daily, 2));
-  _set('h-monthly', fmtRM(monthly, 0));
+  _animateNumber(document.getElementById('h-daily'),   daily,   2);
+  _animateNumber(document.getElementById('h-monthly'), monthly, 0);
 
   // Today's actual interest (sum of autoInt from today's entries)
   const todayInt = getTodayEntries().reduce((s, e) => s + (e.autoInt || 0), 0);
@@ -1341,45 +2186,6 @@ const _renderHero = () => {
     } else {
       tiEl.textContent  = '未记录';
       tiEl.style.color  = 'rgba(255,255,255,.4)';
-    }
-  }
-
-  // Item 5: Monthly cumulative interest
-  const now2  = new Date();
-  const curMk = `${now2.getFullYear()}-${String(now2.getMonth()+1).padStart(2,'0')}`;
-  const monthInt = monthlyInterest(curMk);
-  const miEl = document.getElementById('h-month-int');
-  if (miEl) {
-    miEl.textContent = monthInt > 0 ? '+' + fmtRM(monthInt, 2) : 'RM 0.00';
-    miEl.style.color = monthInt > 0 ? '#FFD700' : 'rgba(255,255,255,.5)';
-  }
-
-  // Item 6: Monthly savings progress
-  const topup2     = state.settings.topup || 2000;
-  const pids2      = [...new Set(state.entries.map(e => e.pid))];
-  const monthStartBal = pids2.reduce((s, pid) => {
-    const before = state.entries
-      .filter(e => e.pid === pid && e.date < curMk + '-01')
-      .sort((a, b) => a.date.localeCompare(b.date));
-    return s + (before.length ? before[before.length-1].bal : 0);
-  }, 0);
-  const curBal     = totalBal();
-  const monthSaved = Math.max(0, curBal - monthStartBal);
-  const monthPct   = topup2 > 0 ? Math.min(100, monthSaved / topup2 * 100).toFixed(0) : 0;
-  const mpEl = document.getElementById('h-month-progress');
-  if (mpEl) mpEl.textContent = `${fmtRM(monthSaved, 0)} / ${fmtRM(topup2, 0)} (${monthPct}%)`;
-
-  // Item 7: Wedding countdown
-  const wDate    = state.settings.wedding_date;
-  const wCountEl = document.getElementById('h-wedding-countdown');
-  const wDaysEl  = document.getElementById('h-days-left');
-  if (wDate && wCountEl && wDaysEl) {
-    const daysLeft = Math.ceil((new Date(wDate) - now2) / 86400000);
-    if (daysLeft > 0) {
-      wCountEl.style.display = 'block';
-      wDaysEl.textContent    = daysLeft.toLocaleString();
-    } else {
-      wCountEl.style.display = 'none';
     }
   }
 };
@@ -1455,8 +2261,8 @@ const _renderBudgetCard = () => {
   card.style.display = 'block';
 
   const tBud  = state.budgetItems.reduce((s, i) => s + i.budget, 0);
-  const myP   = state.expenses.filter(e => { const pb = e.paid_by||'me'; return pb==='me'||pb===state.uid; }).reduce((s,e)=>s+e.amt,0);
-  const herP  = state.expenses.filter(e => { const pb = e.paid_by||'me'; return pb==='her'||(state.partnerUid&&pb===state.partnerUid); }).reduce((s,e)=>s+e.amt,0);
+  const myP   = state.expenses.filter(e => (e.paid_by || 'me') === 'me').reduce((s, e) => s + e.amt, 0);
+  const herP  = totalSpentBy('her');
   const tP    = myP + herP;
   const tBal  = state.budgetItems.reduce((s, item) => {
     const paid = state.expenses
@@ -1556,23 +2362,17 @@ const _renderYieldAlerts = () => {
   let html  = '';
 
   state.platforms.forEach(p => {
-    const setE = getPlatEAR(p);
-    const t7   = trailingEAR(p.id, 7);
-    // Use trailing EAR if available, else fall back to set EAR
-    const effE = t7 != null ? t7 : setE;
-
-    if (p.role === 'primary' && effE < 3.5) {
-      const label = t7 != null ? `实际7天 ${t7.toFixed(2)}%` : `设定 ${setE.toFixed(1)}%`;
+    const e = getPlatEAR(p);
+    if (p.role === 'primary' && e < 3.5) {
       html += `<div class="alert alert-amber">
         <span>⚠️</span>
-        <div><strong>${p.name} ${label}</strong> — 主力平台收益偏低，留意新 Promo</div>
+        <div><strong>${p.name} EAR ${e.toFixed(1)}%</strong> — 主力平台收益下滑，留意新 Promo</div>
       </div>`;
     }
-    if (effE < 3.0) {
-      const label = t7 != null ? `实际7天 ${t7.toFixed(2)}%` : `设定 ${setE.toFixed(1)}%`;
+    if (e < 3.0) {
       html += `<div class="alert alert-red">
         <span>🚨</span>
-        <div><strong>${p.name} ${label}</strong> — 低于 3%，建议转出优化器资金</div>
+        <div><strong>${p.name} EAR ${e.toFixed(1)}%</strong> — 低于 3%，建议转出优化器资金</div>
       </div>`;
     }
   });
@@ -1580,7 +2380,7 @@ const _renderYieldAlerts = () => {
   if (ear >= 3.5) {
     html += `<div class="alert alert-green">
       <span>✅</span>
-      <div><strong>综合 % p.a. ${ear.toFixed(2)}%</strong> — 配置良好</div>
+      <div><strong>综合 EAR ${ear.toFixed(2)}%</strong> — 配置良好</div>
     </div>`;
   }
 
@@ -1606,8 +2406,11 @@ const _setWidth = (id, pct) => {
 };
 
 
+// ── ui-log.js ──────────────────────────────────────────────────────────
+
 // ── ui-log.js ─────────────────────────────────────────────────────────────
 // Log screen: platform grid, balance input, auto-interest, save entry
+
 
 
 // ── MODULE STATE ──────────────────────────────────────────────────────────
@@ -1756,11 +2559,11 @@ const doSaveEntry = async () => {
     return;
   }
 
-  const balEl = document.getElementById('inp-balance');
+  const balEl  = document.getElementById('inp-balance');
   const flowEl = document.getElementById('inp-flow');
-  const bal = parseFloat(balEl?.value);
+  const bal    = parseFloat(balEl?.value);
 
-  if (balEl?.value === '' || balEl?.value === null || isNaN(bal) || bal < 0) {
+  if (balEl?.value === '' || balEl?.value == null || isNaN(bal) || bal < 0) {
     showToast('请输入有效余额（可以是 0）');
     return;
   }
@@ -1769,15 +2572,12 @@ const doSaveEntry = async () => {
   const pid     = state.platforms[_selIdx].id;
   const autoInt = calcAutoInt(pid, bal, flow, _flowDir);
   const today   = todayStr();
+  const id      = 'e_' + pid + '_' + today;
 
-  // Find & delete any existing entry for same platform + today in Firestore
-  const existing = state.entries.filter(e => e.pid === pid && e.date === today);
-  for (const old of existing) {
-    try { await fsDeleteEntry(old.id); } catch {}
+  const existingEntries = state.entries.filter(e => e.pid === pid && e.date === today);
+  for (const oldE of existingEntries) {
+    try { await fsDeleteEntry(oldE.id); } catch {}
   }
-
-  // Use a stable ID: pid + date (so it always overwrites the same doc)
-  const id = 'e_' + pid + '_' + today;
 
   const entry = {
     id,
@@ -1790,22 +2590,26 @@ const doSaveEntry = async () => {
     ts:   Date.now(),
   };
 
-  // Update local state
-  state.entries = state.entries.filter(e => !(e.pid === pid && e.date === today));
+  // Remove any existing entry for same platform + today before adding new one
+  state.entries = state.entries.filter(e => !(e.pid === pid && e.date === todayStr()));
   state.entries.push(entry);
 
   try {
     await fsSaveEntry(entry);
     showToast(`✓ 已保存${autoInt > 0 ? ' · 利息 +' + fmtRM(autoInt, 2) : ''}`);
-  } catch (e) {
-    console.error('Save failed:', e);
+  } catch {
     showToast('保存失败，请重试');
     return;
   }
 
   _clearInputs();
+
+  // Auto-advance to next platform
   if (_selIdx < state.platforms.length - 1) _selIdx++;
+
   renderLog();
+
+  // Trigger home re-render via custom event
   document.dispatchEvent(new CustomEvent('wf:refresh'));
 };
 
@@ -1845,8 +2649,12 @@ const bindLogListeners = () => {
 };
 
 
+// ── ui-expenses.js ──────────────────────────────────────────────────────────
+
 // ── ui-expenses.js ────────────────────────────────────────────────────────
 // Wedding budget planner: overview, budget items, payments, custom categories
+
+
 
 
 
@@ -1935,7 +2743,7 @@ const _renderItemsList = () => {
       .sort((a, b) => new Date(b.date) - new Date(a.date))
       .slice(0, 3)
       .map(e => {
-        const isHer = e.paid_by === 'her' || (state.partnerUid && e.paid_by === state.partnerUid) || (e.paid_by !== 'me' && e.paid_by !== state.uid && e.paid_by === 'her');
+        const isHer = e.paid_by === 'her' || (state.partnerUid && e.paid_by === state.partnerUid);
         return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--muted);padding:4px 0;border-top:1px solid var(--border)">
           <span>${e.date.slice(5)} ${isHer ? '💜' : '💰'} ${e.note || '付款'}</span>
           <div style="display:flex;align-items:center;gap:6px">
@@ -2175,7 +2983,7 @@ const addExpenseUI = async () => {
     amt,
     date,
     note,
-    paid_by: _selPaidBy === 'me' ? state.uid : (state.partnerUid || 'her'),
+    paid_by:        _selPaidBy === 'me' ? state.uid : (state.partnerUid || 'her'),
     recordedBy:     state.uid,
     ts:             Date.now(),
   };
@@ -2339,121 +3147,28 @@ const _setWidthEx = (id, pct) => {
 };
 
 
+// ── ui-analysis.js ──────────────────────────────────────────────────────────
+
 // ── ui-analysis.js ────────────────────────────────────────────────────────
 // Analysis screen: EAR trends, trailing interest, decisions, sim, monthly report
 
 
-// ── MAIN RENDER ───────────────────────────────────────────────────────────
-// Analysis page month navigator state
-let _analysisMk = (() => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-})();
 
+// ── MAIN RENDER ───────────────────────────────────────────────────────────
 const renderAnalysis = () => {
   _renderStatGrid();
   _renderEarTrend();
   _renderTrailingStats();
+  _renderActualVsExpected();
+  _renderInterestCumulative();
+  _renderPromoROI();
+  _renderDecisionAdvice();
+  _renderWeddingForecast();
+  _renderSavingsHistory();
+  _renderSim();
   _renderDailyInterest();
   _renderRebalanceAnalysis();
-  _renderDecisionAdvice();
-  _renderSim();
   _renderMonthlyReport();
-};
-
-// Item 2: Month navigator
-const _changeAnalysisMonth = (delta) => {
-  const [y, m] = _analysisMk.split('-').map(Number);
-  const d = new Date(y, m - 1 + delta, 1);
-  _analysisMk = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-  _renderDailyInterest();
-  _renderMonthlyReport();
-};
-
-// Items 3+4: Daily interest list + chart
-const _renderDailyInterest = () => {
-  const el = document.getElementById('daily-interest-section');
-  if (!el) return;
-
-  const now = new Date();
-  const curMk = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-  const mk = _analysisMk;
-  const [y, m] = mk.split('-').map(Number);
-  const monthLabel = new Date(y, m-1, 1).toLocaleDateString('zh-MY', {year:'numeric', month:'long'});
-
-  // Get all dates with entries in this month
-  const monthEntries = state.entries.filter(e => e.date.startsWith(mk));
-  
-  // Group by date, sum autoInt
-  const byDate = {};
-  monthEntries.forEach(e => {
-    if (!byDate[e.date]) byDate[e.date] = 0;
-    byDate[e.date] += (e.autoInt || 0);
-  });
-  const dates = Object.keys(byDate).sort();
-  const totalMint = dates.reduce((s, d) => s + byDate[d], 0);
-
-  // Build bar chart (simple SVG)
-  const maxInt = Math.max(...dates.map(d => byDate[d]), 0.01);
-  const barW = dates.length > 0 ? Math.max(8, Math.min(24, Math.floor(280 / dates.length))) : 16;
-  const chartW = Math.max(280, dates.length * (barW + 3));
-
-  const bars = dates.map((d, i) => {
-    const val = byDate[d];
-    const h   = Math.max(2, Math.round(val / maxInt * 60));
-    const x   = i * (barW + 3);
-    const col = val > 0 ? '#1D9E75' : '#E2E0D8';
-    return `<g>
-      <rect x="${x}" y="${60-h}" width="${barW}" height="${h}" rx="3" fill="${col}"/>
-      ${barW >= 14 ? `<text x="${x + barW/2}" y="80" text-anchor="middle" font-size="8" fill="var(--muted)">${d.slice(8)}</text>` : ''}
-    </g>`;
-  }).join('');
-
-  const chart = dates.length > 0 ? `
-    <div style="overflow-x:auto;margin:10px 0">
-      <svg width="${chartW}" height="90" style="display:block">
-        ${bars}
-      </svg>
-    </div>` : '';
-
-  // Daily list
-  const list = dates.length > 0
-    ? dates.slice().reverse().map(d => {
-        const val = byDate[d];
-        const dayEntries = monthEntries.filter(e => e.date === d && e.autoInt > 0);
-        const detail = dayEntries.map(e => {
-          const pl = state.platforms.find(x => x.id === e.pid);
-          return pl ? `${pl.short||pl.name} +${fmtRM(e.autoInt,2)}` : '';
-        }).filter(Boolean).join(' · ');
-        return `<div class="report-row">
-          <span style="color:var(--muted)">${d.slice(5).replace('-','/')}</span>
-          <div style="text-align:right">
-            <div style="font-weight:800;color:${val>0?'var(--teal)':'var(--muted)'}">${val>0?'+'+fmtRM(val,2):'RM 0.00'}</div>
-            ${detail ? `<div style="font-size:10px;color:var(--muted)">${detail}</div>` : ''}
-          </div>
-        </div>`;
-      }).join('')
-    : '<div class="empty-state">本月没有利息记录</div>';
-
-  el.innerHTML = `
-    <div class="card">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <button id="btn-month-prev" style="background:var(--border);border:none;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:16px;font-weight:800;color:var(--text)">‹</button>
-        <div style="text-align:center">
-          <div style="font-size:13px;font-weight:800">${monthLabel}</div>
-          <div style="font-size:11px;color:var(--muted)">本月累计 <strong style="color:var(--teal)">${totalMint>0?'+'+fmtRM(totalMint,2):'RM 0.00'}</strong></div>
-        </div>
-        <button id="btn-month-next" style="background:var(--border);border:none;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:16px;font-weight:800;color:var(--text);opacity:${mk>=curMk?'.4':'1'}" ${mk>=curMk?'disabled':''}>›</button>
-      </div>
-      <div class="card-label">每日利息趋势</div>
-      ${chart}
-      <div class="card-label" style="margin-top:10px">每日明细</div>
-      ${list}
-    </div>`;
-
-  // Bind nav buttons AFTER innerHTML is set
-  document.getElementById('btn-month-prev')?.addEventListener('click', () => _changeAnalysisMonth(-1));
-  document.getElementById('btn-month-next')?.addEventListener('click', () => _changeAnalysisMonth(1));
 };
 
 // ── STAT GRID (4 boxes) ───────────────────────────────────────────────────
@@ -2467,7 +3182,7 @@ const _renderStatGrid = () => {
   el.innerHTML = `
     <div class="stat-box">
       <div class="sv" style="color:var(--teal)">${ear.toFixed(2)}%</div>
-      <div class="sl">综合 % p.a.</div>
+      <div class="sl">综合 EAR</div>
     </div>
     <div class="stat-box">
       <div class="sv" style="color:var(--teal)">${fmtRM(total * ear / 100 / 365, 2)}</div>
@@ -2592,7 +3307,7 @@ const _renderDecisionAdvice = () => {
   // Spread tip
   if (earSpread >= 0.5) {
     html += _tip('var(--teal-mid)',
-      `📈 <strong>${best.name}</strong> 比 <strong>${worst.name}</strong> 高 ${earSpread.toFixed(1)}%，考虑调整仓位以提升综合 % p.a.。`);
+      `📈 <strong>${best.name}</strong> 比 <strong>${worst.name}</strong> 高 ${earSpread.toFixed(1)}%，考虑调整仓位以提升综合 EAR。`);
   }
 
   el.innerHTML = html;
@@ -2667,34 +3382,26 @@ const _renderMonthlyReport = () => {
   if (!el) return;
 
   const now = new Date();
-  let html  = '';
+  let html  = '<div class="sec-label">月度报告</div>';
   let hasData = false;
 
-  // Use selected month from navigator
-  const mk = _analysisMk;
-  const [y2, m2] = mk.split('-').map(Number);
-  const d  = new Date(y2, m2-1, 1);
-  const ml = d.toLocaleDateString('zh-MY', { year: 'numeric', month: 'long' });
-  const m  = 0; // single month
+  for (let m = 0; m < 3; m++) {
+    const d  = new Date(now.getFullYear(), now.getMonth() - m, 1);
+    const mk = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;   // local time, not UTC
+    const ml = d.toLocaleDateString('zh-MY', { year: 'numeric', month: 'long' });
 
-    const monthEntries = state.entries
-      .filter(e => e.date.startsWith(mk))
-      .sort((a, b) => a.date.localeCompare(b.date));
-    if (!monthEntries.length) { html += '<div class="empty-state">本月暂无数据</div>'; hasData = true; }
+    const monthEntries = state.entries.filter(e => e.date.startsWith(mk));
+    if (!monthEntries.length && m > 0) continue;
     hasData = true;
 
-    const mint = monthlyInterest(mk);
-    // Per-platform latest balance = endBal, earliest = startBal
-    const pids = [...new Set(monthEntries.map(e => e.pid))];
-    const endBal = pids.reduce((s, pid) => {
-      const pe = monthEntries.filter(e => e.pid === pid);
-      return s + (pe.length ? pe[pe.length-1].bal : 0);
-    }, 0) || totalBal();
-    const startBal = pids.reduce((s, pid) => {
-      const pe = monthEntries.filter(e => e.pid === pid);
-      return s + (pe.length ? pe[0].bal : 0);
-    }, 0) || endBal;
-    const growth = endBal - startBal;
+    const mint     = monthlyInterest(mk);
+    const endBal   = monthEntries.length
+      ? monthEntries[monthEntries.length - 1].bal
+      : totalBal();
+    const startBal = monthEntries.length
+      ? monthEntries[0].bal
+      : endBal;
+    const growth   = endBal - startBal;
     const mySpent  = totalSpentBy('me');
     const partBal  = partnerTotalBal();
     const herSpent = totalSpentBy('her');
@@ -2711,7 +3418,7 @@ const _renderMonthlyReport = () => {
       <div class="rb-label">${ml}</div>
       <div class="report-row"><span>实际利息收入</span>
         <span class="rv" style="color:${mint > 0 ? 'var(--teal)' : 'var(--muted)'}">
-          ${mint > 0 ? '+' + fmtRM(mint, 2) : 'RM 0.00'}
+          ${mint > 0 ? '+' + fmtRM(mint, 2) : '需记录利息才能计算'}
         </span>
       </div>
       <div class="report-row"><span>余额变动</span>
@@ -2732,12 +3439,13 @@ const _renderMonthlyReport = () => {
         <span class="rv">${bestPlat}</span>
       </div>
     </div>`;
-
-  if (!hasData) {
-    html += '<div class="empty-state">本月暂无数据</div>';
   }
 
-  el.innerHTML = '<div class="card-label">月度报告</div>' + html;
+  if (!hasData) {
+    html += '<div class="empty-state">记录满一个月后自动生成报告</div>';
+  }
+
+  el.innerHTML = html;
 };
 
 // ── BIND LISTENERS (call once from main.js) ───────────────────────────────
@@ -2747,8 +3455,12 @@ const bindAnalysisListeners = () => {
 };
 
 
+// ── ui-settings.js ──────────────────────────────────────────────────────────
+
 // ── ui-settings.js ────────────────────────────────────────────────────────
 // Settings screen: account, partner, platforms, goals, promos, notifications
+
+
 
 
 
@@ -2764,9 +3476,9 @@ const renderSettings = () => {
   _renderPromoSelector();
   _renderPromoList();
   _renderPartnerSection();
-  _renderRebalanceLog();
   _renderHistory();
   _renderNotifStatus();
+  _renderRebalanceLog();
 };
 
 // ── PLATFORM MANAGE LIST ──────────────────────────────────────────────────
@@ -2783,11 +3495,12 @@ const _renderPlatManageList = () => {
   const liqClass  = { 'T+0': 'b-green', 'T+1': 'b-amber', 'T+2': 'b-amber', locked: 'b-red' };
   const earClass  = e => e >= 3.5 ? 'b-green' : e >= 3.0 ? 'b-amber' : 'b-red';
 
-  el.innerHTML = state.platforms.map(p => {
+  el.innerHTML = state.platforms.map((p, idx) => {
     const bal  = getLatestBal(p.id);
     const ear2 = getPlatEAR(p);
-    return `<div class="plat-manage-card">
+    return `<div class="plat-manage-card" draggable="true" data-plat-idx="${idx}" data-plat-id="${p.id}" style="cursor:grab">
       <div style="display:flex;align-items:center;gap:10px">
+        <span style="color:var(--muted);font-size:16px;cursor:grab;padding:0 2px" title="拖拽排序">⠿</span>
         <div style="width:36px;height:36px;border-radius:9px;background:${p.bg};color:${p.color};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;flex-shrink:0">
           ${p.short || shortInitials(p.name)}
         </div>
@@ -2812,6 +3525,38 @@ const _renderPlatManageList = () => {
   el.querySelectorAll('[data-edit-plat]').forEach(btn => {
     btn.addEventListener('click', () => openPlatModal(btn.dataset.editPlat));
   });
+
+  // Batch 3 (#13): drag-to-reorder platforms
+  let _dragSrcIdx = null;
+  el.querySelectorAll('[data-plat-idx]').forEach(card => {
+    card.addEventListener('dragstart', (e) => {
+      _dragSrcIdx = parseInt(card.dataset.platIdx);
+      card.style.opacity = '0.4';
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    card.addEventListener('dragend', () => { card.style.opacity = '1'; });
+    card.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      card.style.borderTop = '2px solid var(--teal)';
+    });
+    card.addEventListener('dragleave', () => { card.style.borderTop = ''; });
+    card.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      card.style.borderTop = '';
+      const targetIdx = parseInt(card.dataset.platIdx);
+      if (_dragSrcIdx === null || _dragSrcIdx === targetIdx) return;
+      const moved = state.platforms.splice(_dragSrcIdx, 1)[0];
+      state.platforms.splice(targetIdx, 0, moved);
+      _dragSrcIdx = null;
+      // Persist new order to Firestore
+      try {
+        await Promise.all(state.platforms.map((p, i) => fsSavePlatform({ ...p, sortOrder: i })));
+      } catch {}
+      _renderPlatManageList();
+      document.dispatchEvent(new CustomEvent('wf:refresh'));
+    });
+  });
 };
 
 // ── GOAL INPUTS ───────────────────────────────────────────────────────────
@@ -2819,8 +3564,9 @@ const _renderGoalInputs = () => {
   _setVal('set-joint-goal', state.settings.joint_goal || 120000);
   _setVal('set-my-goal',    state.settings.my_goal    || 50000);
   _setVal('set-topup',      state.settings.topup      || 2000);
-  _setVal('set-wedding-date', state.settings.wedding_date || '');
-  _setVal('set-emergency', state.settings.emergency_fund || 5000);
+  _setVal('set-emergency',  state.settings.emergency_fund || 5000);
+  const wdEl = document.getElementById('set-wedding-date');
+  if (wdEl) wdEl.value = state.settings.wedding_date || '';
 };
 
 const saveGoals = async () => {
@@ -2829,11 +3575,11 @@ const saveGoals = async () => {
   const tp = parseFloat(document.getElementById('set-topup')?.value);
   const ef = parseFloat(document.getElementById('set-emergency')?.value);
   const wd = document.getElementById('set-wedding-date')?.value;
-  if (jg > 0) state.settings.joint_goal = jg;
-  if (mg > 0) state.settings.my_goal    = mg;
-  if (tp > 0) state.settings.topup      = tp;
+  if (jg > 0) state.settings.joint_goal     = jg;
+  if (mg > 0) state.settings.my_goal        = mg;
+  if (tp > 0) state.settings.topup          = tp;
   if (ef > 0) state.settings.emergency_fund = ef;
-  if (wd)     state.settings.wedding_date = wd;
+  if (wd)     state.settings.wedding_date   = wd;
   await saveUserSettings(state.settings);
   showToast('目标已保存 ✓');
   document.dispatchEvent(new CustomEvent('wf:refresh'));
@@ -2981,21 +3727,6 @@ const _connectPartner = async () => {
   }
 };
 
-const _migrateData = async () => {
-  showToast('迁移中...');
-  try {
-    const count = await migrateSoloDataToCouple();
-    if (count > 0) {
-      showToast(`✅ 已迁移 ${count} 条数据到共享空间`);
-    } else {
-      showToast('没有找到需要迁移的旧数据');
-    }
-    document.dispatchEvent(new CustomEvent('wf:refresh'));
-  } catch (e) {
-    showToast('迁移失败：' + e.message);
-  }
-};
-
 const _disconnectPartner = async () => {
   if (!confirm('断开与伴侣的连接？婚礼预算数据仍会保留，但不再同步。')) return;
   await fsDisconnectPartner();
@@ -3033,32 +3764,17 @@ const _renderNotifStatus = () => {
   const btnEl    = document.getElementById('notif-btn');
   if (!statusEl || !btnEl) return;
 
-  const perm = typeof Notification !== 'undefined'
-    ? Notification.permission
-    : 'unsupported';
-
+  const perm = typeof Notification !== 'undefined' ? Notification.permission : 'unsupported';
   if (perm === 'granted') {
-    statusEl.innerHTML = `
-      ✅ 通知已开启，每早 8 点提醒记录<br>
-      <span style="color:var(--muted)">如需关闭：iPhone 设置 → Safari → 网站设置 → 通知 → 找到此网址 → 改为「拒绝」</span>`;
-    btnEl.textContent   = '已开启';
-    btnEl.style.opacity = '0.5';
-    btnEl.disabled      = true;
+    statusEl.textContent = '✅ 通知已开启，每晚 8 点提醒记录';
+    btnEl.textContent = '已开启';
+    btnEl.style.opacity = '0.6';
+    btnEl.disabled = true;
   } else if (perm === 'denied') {
-    statusEl.innerHTML = `
-      ❌ 通知已被拒绝<br>
-      <span style="color:var(--muted)">如需开启：iPhone 设置 → Safari → 网站设置 → 通知 → 找到此网址 → 改为「允许」</span>`;
+    statusEl.textContent = '❌ 通知已被拒绝，请在 iPhone 设置 → Safari → 通知 里手动开启';
     btnEl.style.display = 'none';
-  } else if (perm === 'unsupported') {
-    statusEl.textContent = '此浏览器不支持通知功能';
-    btnEl.style.display  = 'none';
   } else {
-    // default / not yet asked
-    statusEl.textContent = '开启后每早 8 点提醒你记录今日余额';
-    btnEl.textContent    = '开启通知';
-    btnEl.disabled       = false;
-    btnEl.style.opacity  = '1';
-    btnEl.style.display  = '';
+    statusEl.textContent = '开启后每晚 8 点提醒你记录今日余额';
   }
 };
 
@@ -3086,7 +3802,7 @@ const scheduleNotification = () => {
     if (!todayEntries.length) {
       new Notification('💍 WedFund 提醒', {
         body: '今天还没有记录平台余额，快去更新！',
-        icon: './icon-192.png',
+        icon: 'icons/icon-192.png',
       });
     }
     scheduleNotification(); // reschedule for next day
@@ -3104,8 +3820,7 @@ const openPlatModal = (editId) => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
   document.getElementById('pm-editing-id').value = '';
-  const delBtn = document.getElementById('delete-plat-btn');
-  if (delBtn) delBtn.style.display = 'none';
+  document.getElementById('delete-plat-btn').style.display = 'none';
   document.getElementById('plat-modal-title').textContent = '添加新平台';
 
   if (editId) {
@@ -3114,9 +3829,9 @@ const openPlatModal = (editId) => {
     document.getElementById('pm-name').value  = p.name;
     document.getElementById('pm-short').value = p.short || '';
     document.getElementById('pm-ear').value   = getPlatEAR(p);
-    document.getElementById('pm-cap').value   = p.cap || '';
+    if (p.cap) document.getElementById('pm-cap').value = p.cap;
     document.getElementById('pm-editing-id').value = editId;
-    if (delBtn) delBtn.style.display = 'block';
+    document.getElementById('delete-plat-btn').style.display = 'block';
     document.getElementById('plat-modal-title').textContent = '编辑平台';
     _pmLiquid = p.liquid || 'T+0';
     _pmRole   = p.role   || 'primary';
@@ -3126,13 +3841,17 @@ const openPlatModal = (editId) => {
   _syncModalSegs();
   _renderColorGrid();
 
-  const modal = document.getElementById('plat-modal');
-  modal.classList.remove('hidden');
-  modal.querySelector('.modal-sheet').scrollTop = 0;
+  // Show modal
+  document.getElementById('plat-modal').classList.remove('hidden');
+  document.getElementById('plat-modal').querySelector('.modal-sheet').scrollTop = 0;
+  document.body.style.position = 'fixed';
+  document.body.style.width    = '100%';
 };
 
 const closePlatModal = () => {
   document.getElementById('plat-modal').classList.add('hidden');
+  document.body.style.position = '';
+  document.body.style.width    = '';
 };
 
 const setPlatField = (field, val) => {
@@ -3231,18 +3950,6 @@ const deletePlatformUI = async () => {
 
 // ── BIND LISTENERS (call once from main.js) ───────────────────────────────
 const bindSettingsListeners = () => {
-  // Static migrate button (always in HTML)
-  document.getElementById('migrate-data-btn')?.addEventListener('click', _migrateData);
-  document.getElementById('export-csv-btn')?.addEventListener('click', exportCSV);
-  document.getElementById('save-rb-btn')?.addEventListener('click', saveRebalanceUI);
-  document.getElementById('rb-status-ctrl')?.querySelectorAll('.seg-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      _rbStatus = btn.dataset.status;
-      document.getElementById('rb-status-ctrl')?.querySelectorAll('.seg-btn').forEach(b => {
-        b.classList.toggle('active', b.dataset.status === _rbStatus);
-      });
-    });
-  });
   // Platform modal open/close
   document.getElementById('add-plat-btn')?.addEventListener('click', () => openPlatModal());
   document.getElementById('close-plat-modal-btn')?.addEventListener('click', closePlatModal);
@@ -3266,6 +3973,18 @@ const bindSettingsListeners = () => {
   // Goals
   document.getElementById('save-goals-btn')?.addEventListener('click', saveGoals);
 
+  // Rebalance
+  document.getElementById('save-rb-btn')?.addEventListener('click', saveRebalanceUI);
+  document.getElementById('rb-status-ctrl')?.querySelectorAll('.seg-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      _rbStatus = btn.dataset.status;
+      document.getElementById('rb-status-ctrl')?.querySelectorAll('.seg-btn').forEach(b => b.classList.toggle('active', b === btn));
+    });
+  });
+
+  // Export CSV
+  document.getElementById('export-csv-btn')?.addEventListener('click', exportCSV);
+
   // Promos
   document.getElementById('add-promo-btn')?.addEventListener('click', addPromo);
 
@@ -3288,7 +4007,10 @@ const _setVal = (id, val) => {
 
 
 // ── ui-inflow.js ──────────────────────────────────────────────────────────
+
+// ── ui-inflow.js ──────────────────────────────────────────────────────────
 // Inflow allocation: salary mode, bonus mode, platform advice, promo tip
+
 
 
 // ── MODULE STATE ──────────────────────────────────────────────────────────
@@ -3300,6 +4022,7 @@ const renderInflow = () => {
   const wfEl = document.getElementById('inflow-wedding-fixed');
   if (wfEl && !wfEl.value) wfEl.value = state.settings.topup || 2000;
   _renderRules();
+  _renderOptimalAllocation();
   calcInflow();
 };
 
@@ -3369,10 +4092,8 @@ const syncSliders = () => {
 const calcInflow = () => {
   const amt = parseFloat(document.getElementById('inflow-amt')?.value) || 0;
   const resultCard = document.getElementById('inflow-result-card');
+  _renderOptimalAllocation();
   if (!resultCard) return;
-
-  // Update optimal allocation with new inflow
-  
 
   if (amt <= 0) {
     resultCard.style.display = 'none';
@@ -3584,712 +4305,6 @@ const bindInflowListeners = () => {
     document.getElementById(id)?.addEventListener('input', syncSliders);
   });
 };
-
-
-// ── main.js ───────────────────────────────────────────────────────────────
-// App entry point: Auth, navigation, listeners, global refresh
-
-
-
-
-
-
-
-
-
-// ── EXPOSE DEFAULT_CATS globally for getAllCats() in data.js ───────────────
-window._DEFAULT_CATS = DEFAULT_CATS;
-
-// ── ACTIVE SCREEN ─────────────────────────────────────────────────────────
-let _activeScreen = 'home';
-
-// ── NAVIGATION ────────────────────────────────────────────────────────────
-const showScreen = (name) => {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  const target = document.getElementById('screen-' + name);
-  if (target) target.classList.add('active');
-
-  document.querySelectorAll('.nav-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.screen === name);
-  });
-
-  document.getElementById('app')?.scrollTo({ top: 0 });
-  _activeScreen = name;
-
-  switch (name) {
-    case 'home':     renderHome();                         break;
-    case 'log':      renderLog();                          break;
-    case 'inflow':   renderInflow();                       break;
-    case 'expenses': renderExpenses(); setExpTab('list');  break;
-    case 'analysis': renderAnalysis();                     break;
-    case 'settings': renderSettings();                     break;
-  }
-};
-
-// ── GLOBAL REFRESH ────────────────────────────────────────────────────────
-const onRefresh = () => {
-  renderHome();
-  if (_activeScreen !== 'home') {
-    switch (_activeScreen) {
-      case 'log':      renderLog();      break;
-      case 'inflow':   renderInflow();   break;
-      case 'expenses': renderExpenses(); break;
-      case 'analysis': renderAnalysis(); break;
-      case 'settings': renderSettings(); break;
-    }
-  }
-};
-
-// ── FIRESTORE DATA CALLBACK ───────────────────────────────────────────────
-const onDataUpdate = () => {
-  renderHome();
-  if (_activeScreen !== 'home') onRefresh();
-};
-
-
-
-// ── REBALANCE STATE ──────────────────────────────────────────────────────
-let _rbStatus = 'pending';
-
-// ── REBALANCE FIRESTORE ───────────────────────────────────────────────────
-const rbCol = uid => collection(db, 'users', uid, 'rebalances');
-
-const saveRebalance = async (rb) => {
-  await safeWrite(() => setDoc(_fsDoc(rbCol(state.uid), rb.id), rb));
-};
-
-const deleteRebalance = async (id) => {
-  await fsDel(_fsDoc(rbCol(state.uid), id));
-};
-
-// ── C: REBALANCE ANALYSIS ─────────────────────────────────────────────────
-const _renderRebalanceAnalysis = () => {
-  const el = document.getElementById('rebalance-section');
-  if (!el) return;
-
-  const platforms = state.platforms;
-  if (!platforms.length) { el.innerHTML = ''; return; }
-
-  const emergencyTarget = state.settings.emergency_fund || 5000;
-  const now = new Date();
-
-  // Build platform data rows
-  const rows = platforms.map(p => {
-    const bal      = getLatestBal(p.id);
-    const t7       = trailingEAR(p.id, 7);
-    const t30      = trailingEAR(p.id, 30);
-    const setEAR   = getPlatEAR(p);
-    const effEAR   = t7 != null ? t7 : setEAR;
-
-    // Today's interest
-    const todayI   = getTodayEntries().filter(e => e.pid === p.id)
-                       .reduce((s, e) => s + (e.autoInt || 0), 0);
-    // 7-day avg daily interest
-    const cutoff7  = new Date(); cutoff7.setDate(cutoff7.getDate() - 7);
-    const i7days   = state.entries.filter(e => e.pid === p.id && new Date(e.date) >= cutoff7);
-    const avg7     = i7days.length ? i7days.reduce((s,e)=>s+(e.autoInt||0),0)/7 : 0;
-
-    // Determine status
-    let status, statusColor, statusLabel;
-    const diff = effEAR - setEAR;
-
-    if (p.role === 'backup' && (p.liquid === 'T+0' || p.liquid === 'T+1') && bal >= emergencyTarget * 0.8) {
-      status = 'emergency'; statusColor = 'var(--blue)'; statusLabel = '🛡️ 备用';
-    } else if (diff >= -0.2) {
-      status = 'keep'; statusColor = 'var(--teal)'; statusLabel = '✅ Keep';
-    } else if (diff >= -0.5) {
-      status = 'watch'; statusColor = 'var(--amber)'; statusLabel = '👀 Watch';
-    } else {
-      status = 'exit'; statusColor = 'var(--red)'; statusLabel = '🚪 Exit';
-    }
-
-    // Check active promo
-    const activePromo = state.promos.find(pr => pr.platform === p.id && new Date(pr.expiry) >= now);
-    if (activePromo) {
-      const dl = Math.ceil((new Date(activePromo.expiry) - now) / 86400000);
-      statusLabel = `⏰ Promo ${dl}天`;
-      statusColor = 'var(--purple)';
-    }
-
-    return { p, bal, setEAR, effEAR, t7, t30, todayI, avg7, status, statusColor, statusLabel, activePromo };
-  }).filter(r => r.bal > 0 || r.p.role === 'primary');
-
-  // Calculate rebalance suggestions
-  const suggestions = _calcRebalanceSuggestions(rows, emergencyTarget);
-
-  // Build table
-  // Table header
-  const tableHeader = `
-    <div style="display:grid;grid-template-columns:36px 1fr 72px 64px 64px;gap:6px;padding:6px 0 8px;border-bottom:2px solid var(--border);margin-bottom:2px">
-      <div></div>
-      <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">平台</div>
-      <div style="font-size:9px;font-weight:700;color:var(--muted);text-align:right;text-transform:uppercase;letter-spacing:.06em">实际/设定</div>
-      <div style="font-size:9px;font-weight:700;color:var(--muted);text-align:right;text-transform:uppercase;letter-spacing:.06em">今日息</div>
-      <div style="font-size:9px;font-weight:700;color:var(--muted);text-align:center;text-transform:uppercase;letter-spacing:.06em">建议</div>
-    </div>`;
-
-  const tableRows = rows.map(r => `
-    <div style="display:grid;grid-template-columns:36px 1fr 72px 64px 64px;gap:6px;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)">
-      <div style="width:32px;height:32px;border-radius:8px;background:${r.p.bg};color:${r.p.color};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900">${r.p.short||r.p.name.slice(0,3).toUpperCase()}</div>
-      <div style="min-width:0">
-        <div style="font-size:12px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.p.name}</div>
-        <div style="font-size:10px;color:var(--muted);margin-top:2px">${fmtRM(r.bal,0)} · ${r.p.liquid||'—'}</div>
-      </div>
-      <div style="text-align:right">
-        <div style="font-size:12px;font-weight:800;color:${r.t7!=null?'var(--teal)':'var(--muted)'}">${r.t7!=null?r.t7.toFixed(2)+'%':'—'}</div>
-        <div style="font-size:9px;color:var(--muted);margin-top:1px">${r.setEAR.toFixed(2)}% 设定</div>
-      </div>
-      <div style="text-align:right">
-        <div style="font-size:12px;font-weight:800;color:${r.todayI>0?'var(--teal)':'var(--muted)'}">${r.todayI>0?'+'+fmtRM(r.todayI,2):'—'}</div>
-      </div>
-      <div style="text-align:center">
-        <span style="font-size:10px;font-weight:700;color:${r.statusColor};white-space:nowrap">${r.statusLabel}</span>
-      </div>
-    </div>`).join('');
-
-  // Build suggestions
-  const suggHtml = suggestions.length
-    ? suggestions.map(s => `
-        <div style="display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--border);font-size:12px;line-height:1.55">
-          <span style="flex-shrink:0">${s.icon}</span>
-          <div>
-            <div style="font-weight:700">${s.title}</div>
-            <div style="color:var(--muted);margin-top:2px">${s.desc}</div>
-            ${s.amount ? `<div style="color:var(--teal);font-weight:700;margin-top:2px">建议转移：${fmtRM(s.amount,0)}</div>` : ''}
-            ${s.gain ? `<div style="color:var(--muted);font-size:11px">年多收：+${fmtRM(s.gain,0)}</div>` : ''}
-          </div>
-        </div>`).join('')
-    : '<div style="color:var(--muted);font-size:13px;padding:8px 0">✅ 配置良好，暂无调仓建议</div>';
-
-  el.innerHTML = `
-    <div class="card">
-      <div class="card-label">📊 平台调仓分析（实际7天 EAR）</div>
-      ${tableRows}
-    </div>
-    <div class="card">
-      <div class="card-label">💡 调仓建议</div>
-      ${suggHtml}
-    </div>`;
-};
-
-const _calcRebalanceSuggestions = (rows, emergencyTarget) => {
-  const suggestions = [];
-  const now = new Date();
-
-  // Sort by effective EAR desc
-  const sorted = [...rows].sort((a, b) => b.effEAR - a.effEAR);
-  const best   = sorted[0];
-
-  // Emergency fund check
-  const emergencyPlatforms = rows.filter(r =>
-    r.p.liquid === 'T+0' || r.p.liquid === 'T+1'
-  );
-  const emergencyBal = emergencyPlatforms.reduce((s, r) => s + r.bal, 0);
-
-  if (emergencyBal < emergencyTarget) {
-    const needed = emergencyTarget - emergencyBal;
-    const source = rows.filter(r => r.p.liquid !== 'T+0' && r.p.liquid !== 'T+1' && r.bal > needed)
-      .sort((a, b) => a.effEAR - b.effEAR)[0];
-    suggestions.push({
-      icon: '🛡️',
-      title: '应急备用金不足',
-      desc: `建议从 ${source?.p.name || '主力平台'} 转入 T+0/T+1 平台`,
-      amount: needed,
-      gain: null,
-    });
-  }
-
-  // Promo expiring soon
-  rows.forEach(r => {
-    if (r.activePromo) {
-      const dl = Math.ceil((new Date(r.activePromo.expiry) - now) / 86400000);
-      if (dl <= 14) {
-        const gain = r.bal * (best.setEAR - getPlatEAR(r.p)) / 100;
-        suggestions.push({
-          icon: '⏰',
-          title: `${r.p.name} Promo 还有 ${dl} 天到期`,
-          desc: `到期后建议转入 ${best.p.name}（${best.setEAR.toFixed(2)}% p.a.）`,
-          amount: r.bal,
-          gain: Math.max(0, gain),
-        });
-      }
-    }
-  });
-
-  // Low EAR platforms - suggest moving to best
-  rows.forEach(r => {
-    if (r.status === 'exit' && r.bal > 1000 && !r.activePromo) {
-      const gain = r.bal * (best.effEAR - r.effEAR) / 100;
-      suggestions.push({
-        icon: '🚪',
-        title: `${r.p.name} 实际收益偏低`,
-        desc: `建议转入 ${best.p.name}（高 ${(best.effEAR - r.effEAR).toFixed(2)}% p.a.）`,
-        amount: r.bal,
-        gain: Math.max(0, gain),
-      });
-    }
-  });
-
-  // Concentration suggestion - put more in best platform
-  const nonEmergencyBal = rows
-    .filter(r => r.p.liquid !== 'T+0' && r.p.liquid !== 'T+1')
-    .reduce((s, r) => s + r.bal, 0);
-  const bestPlatBal = best?.bal || 0;
-  const bestPlatPct = nonEmergencyBal > 0 ? bestPlatBal / nonEmergencyBal * 100 : 0;
-
-  if (best && bestPlatPct < 50 && !best.activePromo) {
-    suggestions.push({
-      icon: '📈',
-      title: `加码 ${best.p.name}（最高 ${best.setEAR.toFixed(2)}% p.a.）`,
-      desc: `目前只占非应急资金 ${bestPlatPct.toFixed(0)}%，建议提高至 50-60%`,
-      amount: null,
-      gain: null,
-    });
-  }
-
-  return suggestions;
-};
-
-// ── D: REBALANCE LOG ──────────────────────────────────────────────────────
-const _renderRebalanceLog = () => {
-  const el = document.getElementById('rebalance-log-list');
-  if (!el) return;
-
-  // Populate selectors
-  const fromSel = document.getElementById('rb-from');
-  const toSel   = document.getElementById('rb-to');
-  const dateEl  = document.getElementById('rb-date');
-  if (fromSel && toSel) {
-    const opts = state.platforms.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
-    fromSel.innerHTML = opts;
-    toSel.innerHTML   = opts;
-  }
-  if (dateEl && !dateEl.value) dateEl.value = todayStr();
-
-  const logs = [...(state.rebalances || [])].sort((a, b) => b.ts - a.ts).slice(0, 20);
-  if (!logs.length) {
-    el.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:8px 0">暂无调仓记录</div>';
-    return;
-  }
-
-  el.innerHTML = logs.map(rb => {
-    const fromP = state.platforms.find(p => p.id === rb.from);
-    const toP   = state.platforms.find(p => p.id === rb.to);
-    const isPending = rb.status === 'pending';
-    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px">
-      <div style="flex:1;min-width:0">
-        <div style="font-weight:700">${fromP?.name||rb.from} → ${toP?.name||rb.to}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:2px">${rb.date} · ${rb.note||''}</div>
-        <div style="margin-top:4px">
-          <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;background:${isPending?'var(--amber-light)':'var(--teal-light)'};color:${isPending?'var(--amber)':'var(--teal)'}">
-            ${isPending?'⏳ 进行中':'✅ 已完成'}
-          </span>
-        </div>
-      </div>
-      <div style="text-align:right;flex-shrink:0">
-        <div style="font-weight:800;font-size:15px">${fmtRM(rb.amt,0)}</div>
-        ${isPending?`<button data-rb-done="${rb.id}" style="font-size:11px;font-weight:700;background:var(--teal-light);color:var(--teal);border:none;border-radius:8px;padding:4px 10px;cursor:pointer;margin-top:4px">标记完成</button>`:''}
-      </div>
-      <button data-rb-del="${rb.id}" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;flex-shrink:0">✕</button>
-    </div>`;
-  }).join('');
-
-  // Bind buttons
-  el.querySelectorAll('[data-rb-done]').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const rb = state.rebalances.find(r => r.id === btn.dataset.rbDone);
-      if (rb) { rb.status = 'done'; await saveRebalance(rb); _renderRebalanceLog(); }
-    });
-  });
-  el.querySelectorAll('[data-rb-del]').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      if (!confirm('删除此调仓记录？')) return;
-      state.rebalances = state.rebalances.filter(r => r.id !== btn.dataset.rbDel);
-      await deleteRebalance(btn.dataset.rbDel);
-      _renderRebalanceLog();
-    });
-  });
-};
-
-const saveRebalanceUI = async () => {
-  const from = document.getElementById('rb-from')?.value;
-  const to   = document.getElementById('rb-to')?.value;
-  const amt  = parseFloat(document.getElementById('rb-amt')?.value);
-  const note = document.getElementById('rb-note')?.value.trim() || '';
-
-  if (!from || !to)       { showToast('请选择平台'); return; }
-  if (from === to)         { showToast('转出和转入不能是同一个平台'); return; }
-  if (!amt || amt <= 0)    { showToast('请填写转移金额'); return; }
-
-  const rb = {
-    id:     'rb_' + Date.now(),
-    from, to, amt, note,
-    status: _rbStatus,
-    date:   document.getElementById('rb-date')?.value || todayStr(),
-    ts:     Date.now(),
-  };
-
-  if (!state.rebalances) state.rebalances = [];
-  state.rebalances.push(rb);
-  await saveRebalance(rb);
-
-  ['rb-amt', 'rb-note'].forEach(id => {
-    const el = document.getElementById(id); if (el) el.value = '';
-  });
-
-  showToast('✓ 调仓记录已保存');
-  _renderRebalanceLog();
-};
-
-
-// ── EXPORT CSV ────────────────────────────────────────────────────────────
-const exportCSV = () => {
-  const rows = [...state.entries].sort((a, b) => b.date.localeCompare(a.date));
-
-  if (!rows.length) {
-    showToast('没有数据可以导出');
-    return;
-  }
-
-  // Build CSV header
-  const headers = ['日期', '平台', '平台简称', '余额(RM)', '入/出金(RM)', '方向', '实际利息(RM)'];
-
-  const csvRows = rows.map(e => {
-    const pl = state.platforms.find(p => p.id === e.pid) || { name: e.pid, short: e.pid };
-    return [
-      e.date,
-      pl.name,
-      pl.short || '',
-      e.bal.toFixed(2),
-      (e.flow || 0).toFixed(2),
-      e.flowDir === 'in' ? '入金' : e.flowDir === 'out' ? '出金' : '',
-      (e.autoInt || 0).toFixed(2),
-    ].map(v => `"${v}"`).join(',');
-  });
-
-  // Add summary rows
-  const totalInt = rows.reduce((s, e) => s + (e.autoInt || 0), 0);
-  csvRows.push(''); // empty row
-  csvRows.push(`"总利息收入","${totalInt.toFixed(2)} RM"`);
-  csvRows.push(`"导出日期","${new Date().toLocaleDateString('zh-MY')}"`);
-  csvRows.push(`"总记录数","${rows.length}"`);
-
-  const csv = [headers.join(','), ...csvRows].join('\n');
-  const BOM      = '﻿'; // UTF-8 BOM for Excel
-  const blob     = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8;' });
-  const url      = URL.createObjectURL(blob);
-  const a        = document.createElement('a');
-  const filename = `WedFund_${new Date().toISOString().slice(0,10)}.csv`;
-
-  a.href     = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-
-  showToast(`✓ 已导出 ${rows.length} 条记录`);
-};
-
-// ── ALLOCATION SIMULATOR (入金界面) ──────────────────────────────────────
-let _simAmounts = {};  // user-entered amounts per platform
-
-const _getPlatData = () => {
-  const now = new Date();
-  return state.platforms.map(p => {
-    const bal      = getLatestBal(p.id);
-    const t7       = trailingEAR(p.id, 7);
-    const setEAR   = getPlatEAR(p);
-    const effEAR   = t7 != null ? t7 : setEAR;
-    const hasPromo = state.promos.find(pr => pr.platform === p.id && new Date(pr.expiry) >= now);
-    const promoEAR = hasPromo ? parseFloat(hasPromo.rate) : null;
-    const finalEAR = promoEAR || effEAR;
-    const liqDays  = p.liquid === 'T+0' ? 0
-                   : p.liquid === 'T+1' ? 1
-                   : p.liquid === 'T+2' ? 2
-                   : p.liquid === 'T+3' ? 3
-                   : p.liquid === 'T+5' ? 5
-                   : 999;
-    return { p, bal, effEAR, setEAR, finalEAR, liqDays, hasPromo, promoEAR, t7 };
-  }).sort((a, b) => b.finalEAR - a.finalEAR);
-};
-
-// Optimal allocation with caps + cascade
-const _calcOptimal = (platData, total) => {
-  const alloc = {};
-  platData.forEach(d => alloc[d.p.id] = 0);
-  let remaining = total;
-  const emergencyTarget = state.settings.emergency_fund || 5000;
-
-  const roomLeft = d => Math.max(0, (d.p.cap || Infinity) - alloc[d.p.id]);
-
-  // 1. Emergency: highest EAR T+0/T+1 platforms until target met
-  let emLeft = Math.min(emergencyTarget, remaining);
-  for (const d of platData.filter(x => x.liqDays <= 1)) {
-    if (emLeft <= 0) break;
-    const add = Math.min(emLeft, roomLeft(d), remaining);
-    alloc[d.p.id] += add; emLeft -= add; remaining -= add;
-  }
-
-  // 2. Promo platforms: up to min(cap, 35% total)
-  for (const d of platData.filter(x => x.hasPromo && x.liqDays < 999)) {
-    if (remaining <= 0) break;
-    const limit = Math.min(d.p.cap || Infinity, total * 0.35);
-    const add = Math.max(0, Math.min(limit - alloc[d.p.id], roomLeft(d), remaining));
-    alloc[d.p.id] += add; remaining -= add;
-  }
-
-  // 3. Cascade: best EAR first (max 45%), then spread
-  const rest = platData.filter(x => x.liqDays <= 3);
-  let first = true;
-  for (const d of rest) {
-    if (remaining <= 0) break;
-    const conc = first ? total * 0.45 : Infinity;
-    const add = Math.max(0, Math.min(conc - alloc[d.p.id], roomLeft(d), remaining));
-    if (add > 0) { alloc[d.p.id] += add; remaining -= add; first = false; }
-  }
-  if (remaining > 0 && rest.length) { alloc[rest[0].p.id] += remaining; remaining = 0; }
-  return alloc;
-};
-
-const _blendedEARof = (platData, amounts) => {
-  let tot = 0, wt = 0;
-  platData.forEach(d => {
-    const amt = amounts[d.p.id] || 0;
-    tot += amt; wt += amt * d.finalEAR;
-  });
-  return tot > 0 ? wt / tot : 0;
-};
-
-const _renderOptimalAllocation = () => {
-  const el = document.getElementById('optimal-allocation-section');
-  if (!el) return;
-  const platData = _getPlatData();
-  if (!platData.length) { el.innerHTML = ''; return; }
-
-  const totalAssets = totalBal();
-
-  // Initialise sim amounts to current balances if empty
-  if (Object.keys(_simAmounts).length === 0) {
-    platData.forEach(d => { _simAmounts[d.p.id] = Math.round(d.bal); });
-  }
-
-  const simTotal   = platData.reduce((s, d) => s + (_simAmounts[d.p.id] || 0), 0);
-  const myEAR      = _blendedEARof(platData, _simAmounts);
-  const myReturn   = platData.reduce((s, d) => s + (_simAmounts[d.p.id]||0) * d.finalEAR / 100, 0);
-
-  const optAlloc   = _calcOptimal(platData, simTotal || totalAssets);
-  const optEAR     = _blendedEARof(platData, optAlloc);
-  const optReturn  = platData.reduce((s, d) => s + (optAlloc[d.p.id]||0) * d.finalEAR / 100, 0);
-
-  const gap = optEAR - myEAR;
-  let verdict, verdictColor;
-  if (gap < 0.1)      { verdict = '✅ 配置合理'; verdictColor = 'var(--teal)'; }
-  else if (gap < 0.3) { verdict = '⚠️ 有优化空间'; verdictColor = 'var(--amber)'; }
-  else                { verdict = '🔴 建议调整'; verdictColor = 'var(--red)'; }
-
-  const inputRows = platData.map(d => {
-    const earStr = d.hasPromo
-      ? `<span style="color:var(--purple)">Promo ${d.promoEAR.toFixed(2)}%</span>`
-      : d.t7 != null
-        ? `<span style="color:var(--teal)">实际 ${d.t7.toFixed(2)}%</span>`
-        : `<span style="color:var(--muted)">设定 ${d.setEAR.toFixed(2)}%</span>`;
-    const optAmt = optAlloc[d.p.id] || 0;
-    return `
-      <div style="display:grid;grid-template-columns:30px 1fr 95px 68px;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
-        <div style="width:30px;height:30px;border-radius:8px;background:${d.p.bg};color:${d.p.color};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900">${d.p.short||d.p.name.slice(0,3).toUpperCase()}</div>
-        <div style="min-width:0">
-          <div style="font-size:12px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.p.name}</div>
-          <div style="font-size:10px;margin-top:1px">${earStr} · ${d.p.liquid||'—'}${d.p.cap?` · ≤${fmtRM(d.p.cap,0)}`:''}</div>
-        </div>
-        <input type="number" inputmode="decimal" data-sim-pid="${d.p.id}" value="${_simAmounts[d.p.id]||0}"
-          style="width:100%;padding:8px 6px;border-radius:8px;border:1.5px solid var(--border);background:var(--card);color:var(--text);font-size:13px;font-weight:800;text-align:right;font-family:inherit;outline:none">
-        <div style="text-align:right">
-          <div style="font-size:10px;color:var(--muted)">建议</div>
-          <div style="font-size:11px;font-weight:800;color:var(--teal)">${fmtRM(optAmt,0)}</div>
-        </div>
-      </div>`;
-  }).join('');
-
-  el.innerHTML = `
-    <div class="card" style="margin-bottom:12px">
-      <div class="card-label">🧮 分配模拟器（基于实际 EAR）</div>
-      <div style="display:grid;grid-template-columns:30px 1fr 95px 68px;gap:8px;padding:2px 0 6px;border-bottom:2px solid var(--border)">
-        <div></div>
-        <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase">平台</div>
-        <div style="font-size:9px;font-weight:700;color:var(--muted);text-align:right;text-transform:uppercase">我放多少</div>
-        <div style="font-size:9px;font-weight:700;color:var(--muted);text-align:right;text-transform:uppercase">系统建议</div>
-      </div>
-      ${inputRows}
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0 4px;flex-wrap:wrap;gap:8px">
-        <div>
-          <div style="font-size:11px;color:var(--muted)">你的综合 EAR</div>
-          <div style="font-size:20px;font-weight:900;color:${verdictColor}">${myEAR.toFixed(2)}%</div>
-          <div style="font-size:10px;color:var(--muted)">${fmtRM(myReturn,0)}/年 · 总额 ${fmtRM(simTotal,0)}</div>
-        </div>
-        <div style="text-align:right">
-          <div style="font-size:11px;color:var(--muted)">优化后可达</div>
-          <div style="font-size:16px;font-weight:800;color:var(--teal)">${optEAR.toFixed(2)}%</div>
-          <div style="font-size:10px;color:var(--muted)">${fmtRM(optReturn,0)}/年 (+${fmtRM(Math.max(0,optReturn-myReturn),0)})</div>
-        </div>
-      </div>
-      <div style="text-align:center;font-size:13px;font-weight:800;color:${verdictColor};padding:6px 0">${verdict}</div>
-      <button id="apply-optimal-btn" style="width:100%;padding:11px;border-radius:10px;border:1.5px solid var(--teal);background:var(--teal-light);color:var(--teal);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:4px">⚡ 一键填入优化建议</button>
-      <div style="margin-top:10px;padding:8px 10px;border-radius:8px;background:var(--bg);font-size:11px;color:var(--muted);line-height:1.6">
-        💡 「实际」= 你过去7天真实赚到的 EAR；「设定」= 数据不足，用平台标示利率代替
-      </div>
-    </div>`;
-
-  // Bind input events
-  el.querySelectorAll('[data-sim-pid]').forEach(inp => {
-    inp.addEventListener('input', () => {
-      _simAmounts[inp.dataset.simPid] = parseFloat(inp.value) || 0;
-      // Update only the summary numbers without full re-render (avoid losing focus)
-      _updateSimSummary(platData);
-    });
-    inp.addEventListener('blur', () => _renderOptimalAllocation());
-  });
-
-  // One-click apply
-  document.getElementById('apply-optimal-btn')?.addEventListener('click', () => {
-    platData.forEach(d => { _simAmounts[d.p.id] = Math.round(optAlloc[d.p.id] || 0); });
-    _renderOptimalAllocation();
-    showToast('✓ 已填入优化建议');
-  });
-};
-
-const _updateSimSummary = (platData) => {
-  // Lightweight refresh handled on blur; nothing needed here for now
-};
-
-
-// ── FUNCTION ALIASES (previously imported with 'as') ──────────────────────
-const fsSavePlatform      = savePlatform;
-const fsDeletePlatform    = deletePlatform;
-const fsSaveEntry         = saveEntry;
-const fsDeleteEntry       = deleteEntry;
-const fsSavePromo         = savePromo;
-const fsDeletePromo       = deletePromo;
-const fsSaveBudgetItem    = saveBudgetItem;
-const fsDeleteBudgetItem  = deleteBudgetItem;
-const fsSaveExpense       = saveExpense;
-const fsDeleteExpense     = deleteExpense;
-const fsSaveCustomCat     = saveCustomCat;
-const fsDeleteCustomCat   = deleteCustomCat;
-const fsConnectPartner    = connectPartner;
-const fsDisconnectPartner = disconnectPartner;
-const fsMigrate           = migrateSoloDataToCouple;
-const fsRbSave            = saveRebalance;
-const fsRbDelete          = deleteRebalance;
-
-// ── AUTH STATE ────────────────────────────────────────────────────────────
-onAuthChange(async (user) => {
-  if (user) {
-    state.uid = user.uid;
-    showApp(user);
-
-    try {
-      await ensureUserDoc(user);
-    } catch (e) {
-      console.error('ensureUserDoc failed:', e);
-    }
-
-    startMyListeners(onDataUpdate);
-    renderHome();
-    renderSettings();
-    scheduleNotification();
-
-  } else {
-    // Reset all state
-    state.uid              = null;
-    state.coupleId         = null;
-    state.partnerUid       = null;
-    state.platforms        = [...DEFAULT_PLATFORMS];
-    state.entries          = [];
-    state.promos           = [];
-    state.customCats       = [];
-    state.settings         = { my_goal: 50000, joint_goal: 120000, topup: 2000 };
-    state.budgetItems      = [];
-    state.expenses         = [];
-    state.partnerEntries   = [];
-    state.partnerPlatforms = [];
-
-    stopListeners();
-    showAuth();
-  }
-});
-
-// ── BIND NAV ──────────────────────────────────────────────────────────────
-const bindNav = () => {
-  document.querySelectorAll('.nav-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      if (btn.dataset.screen) showScreen(btn.dataset.screen);
-    });
-  });
-  document.getElementById('go-settings-btn')?.addEventListener('click', () => {
-    showScreen('settings');
-  });
-};
-
-// ── BIND AUTH BUTTONS ─────────────────────────────────────────────────────
-const bindAuth = () => {
-  document.getElementById('google-signin-btn')?.addEventListener('click', async () => {
-    document.getElementById('auth-loading').style.display = 'block';
-    try {
-      await signInWithGoogle();
-    } catch (e) {
-      document.getElementById('auth-loading').style.display = 'none';
-      showToast('登入失败，请重试');
-      console.error('Sign in error:', e);
-    }
-  });
-
-  document.getElementById('signout-btn')?.addEventListener('click', async () => {
-    if (!confirm('确定登出？')) return;
-    stopListeners();
-    await signOutUser();
-  });
-};
-
-// ── DATE ──────────────────────────────────────────────────────────────────
-const setTodayDate = () => {
-  const el = document.getElementById('today-date');
-  if (el) el.textContent = new Date().toLocaleDateString('zh-MY', {
-    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
-  });
-};
-
-// ── GLOBAL REFRESH EVENT ──────────────────────────────────────────────────
-document.addEventListener('wf:refresh', onRefresh);
-
-// ── SERVICE WORKER ────────────────────────────────────────────────────────
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js').catch(err => {
-    console.warn('SW registration failed:', err);
-  });
-}
-
-// ── INIT ──────────────────────────────────────────────────────────────────
-const init = () => {
-  showLoading();          // ← show spinner while Firebase auth checks
-  setTodayDate();
-  bindNav();
-  bindAuth();
-  bindLogListeners();
-  bindExpensesListeners();
-  bindAnalysisListeners();
-  bindSettingsListeners();
-  bindInflowListeners();
-};
-
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', init);
-} else {
-  init();
-}
-
-
-
 
 </script>
 
