@@ -1182,6 +1182,19 @@ const blendedEAR = () => {
   return tot > 0 ? wt / tot : 0;
 };
 
+// 综合 % p.a. — 只用平台设定值，不参考实际EAR。用于分析页统计方块，
+// 跟主页的 blendedEAR()（实际优先）区分开来，让使用者能对比两者差异。
+const blendedSetEAR = () => {
+  let tot = 0, wt = 0;
+  state.platforms.forEach(p => {
+    const b = getLatestBal(p.id);
+    if (b <= 0) return;
+    tot += b;
+    wt  += b * getPlatEAR(p);
+  });
+  return tot > 0 ? wt / tot : 0;
+};
+
 // Auto interest: today_bal - yesterday_bal - net_flow
 const calcAutoInt = (pid, newBal, flow, dir) => {
   const prev    = getLatestBal(pid);
@@ -1228,8 +1241,8 @@ const trailingEAR = (pid, days) => {
   const ti=allRel.reduce((s,e)=>s+(e.autoInt||0),0);
   if (ti<=0) return null;
   const ab=allRel.reduce((s,e)=>s+e.bal,0)/allRel.length;
-  const spanDays=Math.max(1,(new Date(allRel[allRel.length-1].date)-new Date(allRel[0].date))/86400000);
-  return ab>0?(ti/ab)*(365/spanDays)*100:null;
+  // 固定用查询天数(days)当分母，而非记录跨度 —— 避免漏记天数导致年化率虚高
+  return ab>0?(ti/ab)*(365/days)*100:null;
 };
 
 // ── TRAILING INTEREST TOTAL ───────────────────────────────────────────────
@@ -3275,13 +3288,13 @@ const _renderStatGrid = () => {
   const el    = document.getElementById('stat-grid');
   if (!el) return;
   const total   = totalBal();
-  const ear     = blendedEAR();
+  const ear     = blendedSetEAR();
   const mySpent = totalSpentBy('me');
 
   el.innerHTML = `
     <div class="stat-box">
       <div class="sv" style="color:var(--teal)">${ear.toFixed(2)}%</div>
-      <div class="sl">综合 EAR</div>
+      <div class="sl">综合 % p.a.</div>
     </div>
     <div class="stat-box">
       <div class="sv" style="color:var(--teal)">${fmtRM(total * ear / 100 / 365, 2)}</div>
