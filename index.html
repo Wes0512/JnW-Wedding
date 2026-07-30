@@ -2359,36 +2359,38 @@ const _renderYieldAlerts = () => {
   const el  = document.getElementById('alerts-section');
   if (!el) return;
   const ear = blendedEAR();
+  const now = new Date();
   let html  = '';
 
   state.platforms.forEach(p => {
-    const e = getPlatEAR(p);
-    if (p.role === 'primary' && e < 3.5) {
-      html += `<div class="alert alert-amber">
-        <span>⚠️</span>
-        <div><strong>${p.name} EAR ${e.toFixed(1)}%</strong> — 主力平台收益下滑，留意新 Promo</div>
-      </div>`;
+    const bal  = getLatestBal(p.id);
+    if (bal <= 0) return;
+    const setE = getPlatEAR(p);
+    const t7   = trailingEAR(p.id, 7);
+    const effE = t7 != null ? t7 : setE;
+    if (t7 != null && effE < 3.0) {
+      html += `<div class="alert alert-red"><span>🚨</span><div><strong>${p.name} 实际${t7.toFixed(2)}%</strong> — 实际收益低于3%，建议转出</div></div>`;
+    } else if (t7 != null && p.role === 'primary' && effE < setE - 0.3) {
+      html += `<div class="alert alert-amber"><span>⚠️</span><div><strong>${p.name}</strong> 实际${t7.toFixed(2)}% vs 设定${setE.toFixed(1)}%，收益不达标</div></div>`;
     }
-    if (e < 3.0) {
-      html += `<div class="alert alert-red">
-        <span>🚨</span>
-        <div><strong>${p.name} EAR ${e.toFixed(1)}%</strong> — 低于 3%，建议转出优化器资金</div>
-      </div>`;
+  });
+
+  state.promos.filter(pr => new Date(pr.expiry) >= now).forEach(pr => {
+    const dl = Math.ceil((new Date(pr.expiry) - now) / 86400000);
+    if (dl <= 7) {
+      const pn = state.platforms.find(x => x.id === pr.platform)?.name || '平台';
+      html += `<div class="alert alert-purple"><span>⏰</span><div><strong>${pn} Promo 还有 ${dl} 天到期</strong> — 安排转出计划</div></div>`;
     }
   });
 
   if (ear >= 3.5) {
-    html += `<div class="alert alert-green">
-      <span>✅</span>
-      <div><strong>综合 EAR ${ear.toFixed(2)}%</strong> — 配置良好</div>
-    </div>`;
+    html += `<div class="alert alert-green"><span>✅</span><div><strong>综合 ${ear.toFixed(2)}% p.a.</strong> — 配置良好</div></div>`;
+  } else if (ear > 0) {
+    html += `<div class="alert alert-amber"><span>💡</span><div><strong>综合 ${ear.toFixed(2)}% p.a.</strong> — 入金页面查看优化建议</div></div>`;
   }
 
   if (getTodayEntries().length === 0) {
-    html += `<div class="alert alert-blue">
-      <span>📝</span>
-      <div>今天还没记录 — 去<strong>记录</strong>页面更新余额</div>
-    </div>`;
+    html += `<div class="alert alert-blue" style="border-width:2px"><span style="font-size:20px">📝</span><div><strong>今天还没记录余额！</strong><br><span style="font-size:12px">记录才能准确计算实际 EAR 和利息</span></div></div>`;
   }
 
   el.innerHTML = html;
@@ -3266,51 +3268,42 @@ const _renderTrailingStats = () => {
 const _renderDecisionAdvice = () => {
   const el = document.getElementById('decision-advice');
   if (!el) return;
-
   if (!state.platforms.length) {
     el.innerHTML = '<div class="empty-state">添加平台后自动生成建议</div>';
     return;
   }
-
-  const sorted   = [...state.platforms].sort((a, b) => getPlatEAR(b) - getPlatEAR(a));
-  const best     = sorted[0];
-  const worst    = sorted[sorted.length - 1];
-  const earSpread = getPlatEAR(best) - getPlatEAR(worst);
-
-  let html = '';
-
-  // Per-platform tips
-  state.platforms.forEach(p => {
-    const e = getPlatEAR(p);
-    if (p.role === 'primary' && e >= 3.5) {
-      html += _tip('var(--teal-mid)',
-        `✅ <strong>${p.name} ${e.toFixed(1)}%</strong> — 主力平台运行良好，维持 40–55% 配置。`);
-    } else if (p.role === 'primary' && e < 3.5) {
-      html += _tip('#BA7517',
-        `⚠️ <strong>${p.name} ${e.toFixed(1)}%</strong> — 主力平台收益下滑，留意新 Promo 或考虑轮换。`);
-    } else if (p.role === 'backup') {
-      html += _tip('var(--blue)',
-        `🔒 <strong>${p.name} ${e.toFixed(1)}%</strong> — 流动备用，适合紧急资金和短期停泊。`);
-    }
-    if (e < 3.0 && p.role !== 'promo') {
-      html += _tip('#A32D2D',
-        `🚨 <strong>${p.name} EAR ${e.toFixed(1)}%</strong> — 低于 3%，建议转出优化器资金。`);
-    }
+  const now = new Date();
+  const platInfo = state.platforms.map(p => {
+    const t7     = trailingEAR(p.id, 7);
+    const setEAR = getPlatEAR(p);
+    const effEAR = t7 != null ? t7 : setEAR;
+    const bal    = getLatestBal(p.id);
+    const promo  = state.promos.find(pr => pr.platform === p.id && new Date(pr.expiry) >= now);
+    const tag    = t7 != null ? `实际${t7.toFixed(2)}%` : `设定${setEAR.toFixed(2)}%`;
+    return { p, t7, setEAR, effEAR, bal, promo, tag };
   });
-
-  // General rules
-  html += _tip('var(--teal-mid)',
-    '💍 婚礼储备金 ≥50% 放主力平台，不参与 Promo 轮换，稳定第一。');
-  html += _tip('var(--purple)',
-    '🔄 优化器资金（≤30%）才可追逐 fresh funds Promo，到期前 7 天安排转出。');
-
-  // Spread tip
-  if (earSpread >= 0.5) {
-    html += _tip('var(--teal-mid)',
-      `📈 <strong>${best.name}</strong> 比 <strong>${worst.name}</strong> 高 ${earSpread.toFixed(1)}%，考虑调整仓位以提升综合 EAR。`);
+  const withBal = platInfo.filter(x => x.bal > 0).sort((a,b) => b.effEAR - a.effEAR);
+  const best  = withBal[0];
+  const worst = withBal[withBal.length - 1];
+  let html = '';
+  platInfo.forEach(({ p, effEAR, bal, promo, tag }) => {
+    if (bal <= 0) return;
+    if (promo) {
+      const dl = Math.ceil((new Date(promo.expiry) - now) / 86400000);
+      html += _tip('var(--purple)', `⏰ <strong>${p.name} Promo ${promo.rate}%</strong> — 还有 ${dl} 天，到期前7天安排转出`);
+      return;
+    }
+    if (effEAR >= 3.5)      html += _tip('var(--teal-mid)', `✅ <strong>${p.name} ${tag}</strong> — 收益良好，维持配置`);
+    else if (effEAR >= 3.0) html += _tip('#BA7517', `⚠️ <strong>${p.name} ${tag}</strong> — 收益偏低，留意是否有更好选择`);
+    else                    html += _tip('#A32D2D', `🚨 <strong>${p.name} ${tag}</strong> — 低于3%，建议转出`);
+  });
+  if (best && worst && best !== worst) {
+    const spread = best.effEAR - worst.effEAR;
+    if (spread >= 0.3) html += _tip('var(--teal-mid)', `📊 <strong>${best.p.name}</strong>(${best.tag}) 比 <strong>${worst.p.name}</strong>(${worst.tag}) 高 ${spread.toFixed(2)}%，可考虑调仓`);
   }
-
-  el.innerHTML = html;
+  html += _tip('var(--purple)', '🔄 Promo 平台资金到期前7天安排转出，不要让高息变低息');
+  html += _tip('var(--teal-mid)', '💍 婚礼储备金放最高常规 % p.a. 平台，稳定第一');
+  el.innerHTML = html || '<div class="empty-state">暂无建议</div>';
 };
 
 const _tip = (dotColor, html) =>
@@ -3607,6 +3600,15 @@ const _renderPromoList = () => {
 
   const active  = state.promos.filter(p => new Date(p.expiry) >= now).sort((a, b) => new Date(a.expiry) - new Date(b.expiry));
   const expired = state.promos.filter(p => new Date(p.expiry) <  now);
+
+  // Auto-archive: delete promos expired more than 30 days ago
+  expired.forEach(async p => {
+    const daysAgo = Math.floor((now - new Date(p.expiry)) / 86400000);
+    if (daysAgo > 30) {
+      state.promos = state.promos.filter(x => x.id !== p.id);
+      try { await fsDeletePromo(p.id); } catch {}
+    }
+  });
 
   if (!active.length && !expired.length) {
     el.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:8px 0">还没有 Promo 记录</div>';
