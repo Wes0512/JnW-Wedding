@@ -338,7 +338,7 @@ body {
         <button id="go-settings-btn" style="font-size:22px;background:none;border:none;cursor:pointer;color:var(--text)">&#9881;&#65039;</button>
       </div>
     </div>
-    <div id="alerts-section"></div>
+    <div id="unrecorded-alert"></div>
     <div class="hero">
       <div class="hero-label">我的总资产</div>
       <div class="hero-val" id="h-total">RM 0</div>
@@ -409,6 +409,7 @@ body {
       <div id="platform-overview"></div>
     </div>
     <div id="promo-alerts"></div>
+    <div id="alerts-section"></div>
   </div>
 
   <!-- LOG -->
@@ -963,8 +964,9 @@ const startMyListeners = (onUpdate) => {
       state.settings   = { ...DEFAULT_SETTINGS, ...(d.settings || {}) };
       state.coupleId   = d.coupleId   || null;
       state.partnerUid = d.partnerUid || null;
-      if (state.coupleId) startCoupleListeners(onUpdate);
     }
+    // Always start — startCoupleListeners falls back to solo_{uid} internally
+    startCoupleListeners(onUpdate);
     onUpdate('settings');
   }));
 
@@ -1005,22 +1007,23 @@ const startMyListeners = (onUpdate) => {
 };
 
 const startCoupleListeners = (onUpdate) => {
-  const { coupleId, partnerUid } = state;
-  if (!coupleId) return;
+  const { partnerUid } = state;
+  // Solo users still need a budget/expense space — use solo_{uid} as fallback
+  const effectiveCid = state.coupleId || ('solo_' + state.uid);
 
-  // Budget items (shared)
-  _unsubs.push(fsListen(budgetCol(coupleId), snap => {
+  // Budget items (shared, or solo)
+  _unsubs.push(fsListen(budgetCol(effectiveCid), snap => {
     state.budgetItems = snap.docs.map(d => d.data());
     onUpdate('budget');
   }));
 
-  // Expenses (shared)
-  _unsubs.push(fsListen(expCol(coupleId), snap => {
+  // Expenses (shared, or solo)
+  _unsubs.push(fsListen(expCol(effectiveCid), snap => {
     state.expenses = snap.docs.map(d => d.data());
     onUpdate('expenses');
   }));
 
-  // Partner's entries (read-only)
+  // Partner's entries (read-only) — only when actually connected
   if (partnerUid) {
     _unsubs.push(fsListen(partEntrCol(partnerUid), snap => {
       state.partnerEntries = snap.docs.map(d => d.data());
@@ -1100,24 +1103,22 @@ const saveUserSettings = async (settings) => {
   await safeWrite(() => fsSet(userRef(state.uid), { settings }, true));
 };
 
+const _cid = () => state.coupleId || ('solo_' + state.uid);
+
 const saveBudgetItem = async (item) => {
-  if (!state.coupleId) return;
-  await safeWrite(() => fsSet(_fsDoc(budgetCol(state.coupleId), item.id), item));
+  await safeWrite(() => fsSet(_fsDoc(budgetCol(_cid()), item.id), item));
 };
 
 const deleteBudgetItem = async (id) => {
-  if (!state.coupleId) return;
-  await fsDel(_fsDoc(budgetCol(state.coupleId), id));
+  await fsDel(_fsDoc(budgetCol(_cid()), id));
 };
 
 const saveExpense = async (exp) => {
-  if (!state.coupleId) return;
-  await safeWrite(() => fsSet(_fsDoc(expCol(state.coupleId), exp.id), exp));
+  await safeWrite(() => fsSet(_fsDoc(expCol(_cid()), exp.id), exp));
 };
 
 const deleteExpense = async (id) => {
-  if (!state.coupleId) return;
-  await fsDel(_fsDoc(expCol(state.coupleId), id));
+  await fsDel(_fsDoc(expCol(_cid()), id));
 };
 
 // ── PARTNER CONNECT / DISCONNECT ──────────────────────────────────────────
@@ -1173,8 +1174,10 @@ const blendedEAR = () => {
   state.platforms.forEach(p => {
     const b = getLatestBal(p.id);
     if (b <= 0) return;
+    const t7 = trailingEAR(p.id, 7);
+    const effE = t7 != null ? t7 : getPlatEAR(p); // 优先用实际EAR，没数据才退回设定值
     tot += b;
-    wt  += b * getPlatEAR(p);
+    wt  += b * effE;
   });
   return tot > 0 ? wt / tot : 0;
 };
@@ -1616,7 +1619,10 @@ const _renderOptimalAllocation = () => {
       </div>
     </div>
     <div style="text-align:center;font-size:13px;font-weight:800;color:${verdictColor};padding:6px 0">${verdict}</div>
-    <button id="apply-optimal-btn" style="width:100%;padding:11px;border-radius:10px;border:1.5px solid var(--teal);background:var(--teal-light);color:var(--teal);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:4px">⚡ 查看建议怎么调仓</button>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button id="reset-sim-btn" style="flex:1;padding:11px;border-radius:10px;border:1.5px solid var(--border);background:var(--card);color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">↺ 还原实际余额</button>
+      <button id="apply-optimal-btn" style="flex:1;padding:11px;border-radius:10px;border:1.5px solid var(--teal);background:var(--teal-light);color:var(--teal);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">⚡ 填入建议分配</button>
+    </div>
     <div style="margin-top:10px;padding:8px 10px;border-radius:8px;background:var(--bg);font-size:11px;color:var(--muted);line-height:1.6">
       💡 「实际」= 你过去7天真实赚到的 EAR；「设定」= 数据不足，用平台标示利率代替。上方金额默认是你现有余额，可自行调整模拟不同分配方式。
     </div>
@@ -1625,6 +1631,11 @@ const _renderOptimalAllocation = () => {
   el.querySelectorAll('[data-sim-pid]').forEach(inp => {
     inp.addEventListener('input', () => { _simAmounts[inp.dataset.simPid] = parseFloat(inp.value) || 0; });
     inp.addEventListener('blur',  () => _renderOptimalAllocation());
+  });
+  document.getElementById('reset-sim-btn')?.addEventListener('click', () => {
+    platData.forEach(d => { _simAmounts[d.p.id] = Math.round(d.bal); });
+    _renderOptimalAllocation();
+    showToast('✓ 已还原到目前实际余额');
   });
   document.getElementById('apply-optimal-btn')?.addEventListener('click', () => {
     platData.forEach(d => { _simAmounts[d.p.id] = Math.round(optAlloc[d.p.id] || 0); });
@@ -2219,6 +2230,7 @@ window.addEventListener('unhandledrejection', (e) => {
 // ── MAIN RENDER ───────────────────────────────────────────────────────────
 const renderHome = () => {
   _renderDate();
+  _renderUnrecordedAlert();
   _renderHero();
   _renderMyProgress();
   _renderJointCard();
@@ -2433,6 +2445,17 @@ const _renderPromoAlerts = () => {
 };
 
 // ── YIELD ALERTS ──────────────────────────────────────────────────────────
+// 独立的「未记录余额」提醒 — 放在页面最上方
+const _renderUnrecordedAlert = () => {
+  const el = document.getElementById('unrecorded-alert');
+  if (!el) return;
+  if (getTodayEntries().length === 0 && state.platforms.length > 0) {
+    el.innerHTML = `<div class="alert alert-blue" style="border-width:2px"><span style="font-size:20px">📝</span><div><strong>今天还没记录余额！</strong><br><span style="font-size:12px">记录才能准确计算实际 EAR 和利息</span></div></div>`;
+  } else {
+    el.innerHTML = '';
+  }
+};
+
 const _renderYieldAlerts = () => {
   const el  = document.getElementById('alerts-section');
   if (!el) return;
@@ -2465,10 +2488,6 @@ const _renderYieldAlerts = () => {
     html += `<div class="alert alert-green"><span>✅</span><div><strong>综合 ${ear.toFixed(2)}% p.a.</strong> — 配置良好</div></div>`;
   } else if (ear > 0) {
     html += `<div class="alert alert-amber"><span>💡</span><div><strong>综合 ${ear.toFixed(2)}% p.a.</strong> — 入金页面查看优化建议</div></div>`;
-  }
-
-  if (getTodayEntries().length === 0) {
-    html += `<div class="alert alert-blue" style="border-width:2px"><span style="font-size:20px">📝</span><div><strong>今天还没记录余额！</strong><br><span style="font-size:12px">记录才能准确计算实际 EAR 和利息</span></div></div>`;
   }
 
   el.innerHTML = html;
