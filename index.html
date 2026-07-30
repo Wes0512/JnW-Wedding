@@ -1260,7 +1260,7 @@ const getCat = (id) =>
 // ── BUDGET CALCULATIONS ───────────────────────────────────────────────────
 const budgetTotals = () => {
   const totalBudget  = state.budgetItems.reduce((s, i) => s + i.budget, 0);
-  const myPaid       = state.expenses.filter(e => (e.paid_by || 'me') === 'me').reduce((s, e) => s + e.amt, 0);
+  const myPaid       = totalSpentBy('me');
   const herPaid      = totalSpentBy('her');
   const totalPaid    = myPaid + herPaid;
   const totalBalance = state.budgetItems.reduce((s, item) => {
@@ -2351,7 +2351,7 @@ const _renderBudgetCard = () => {
   card.style.display = 'block';
 
   const tBud  = state.budgetItems.reduce((s, i) => s + i.budget, 0);
-  const myP   = state.expenses.filter(e => (e.paid_by || 'me') === 'me').reduce((s, e) => s + e.amt, 0);
+  const myP   = totalSpentBy('me');
   const herP  = totalSpentBy('her');
   const tP    = myP + herP;
   const tBal  = state.budgetItems.reduce((s, item) => {
