@@ -1,5 +1,5 @@
-const CACHE = 'wedfund-v7';
-const ASSETS = ['./', './index.html', './manifest.json', './main.js', './firebase.js', './data.js', './ui-home.js', './ui-log.js', './ui-expenses.js', './ui-analysis.js', './ui-settings.js', './ui-inflow.js'];
+const CACHE = 'wedfund-v8';
+const ASSETS = ['./', './index.html', './manifest.json'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
 });
