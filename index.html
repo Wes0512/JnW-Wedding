@@ -44,6 +44,12 @@ body {
   overflow: hidden;
 }
 
+/* #main-app must be a flex container too, or #app's flex:1 has no effect */
+#main-app {
+  display: flex; flex-direction: column;
+  flex: 1 1 0; min-height: 0; height: 100%;
+}
+
 /* ── LAYOUT ────────────────────────────────────────────────────────────── */
 #app {
   flex: 1 1 0; min-height: 0; overflow-y: auto; overflow-x: hidden;
@@ -829,7 +835,7 @@ const showAuth = () => {
 const showApp = user => {
   document.getElementById('loading-screen').style.display = 'none';
   document.getElementById('auth-screen').style.display    = 'none';
-  document.getElementById('main-app').style.display       = 'block';
+  document.getElementById('main-app').style.display       = 'flex';
   document.getElementById('bottom-nav').style.display     = 'flex';
   // Fill user profile
   document.getElementById('user-name').textContent  = user.displayName || '用户';
