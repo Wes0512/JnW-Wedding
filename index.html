@@ -387,6 +387,9 @@ body {
         <div class="joint-part"><div class="jl">我的合计</div><div class="jv" id="j-me-amt">RM 0</div></div>
         <div class="joint-part"><div class="jl">伴侣合计</div><div class="jv" id="j-her-amt">RM 0</div></div>
       </div>
+      <div id="wedding-countdown-row" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.15);text-align:center">
+        💍 距离婚礼还有 <strong id="h-wedding-days" style="color:#FFD700;font-size:18px">--</strong> 天
+      </div>
     </div>
     <div class="card" id="home-budget-card" style="display:none">
       <div class="card-label">婚礼预算进度</div>
@@ -2350,6 +2353,20 @@ const _renderJointCard = () => {
   _set('j-her-amt', fmtRM(partBal + herSpent));
   _setWidth('j-bar-me',  mePct);
   _setWidth('j-bar-her', herPct);
+
+  // Wedding countdown
+  const wDate = state.settings.wedding_date;
+  const countdownRow = document.getElementById('wedding-countdown-row');
+  const daysEl = document.getElementById('h-wedding-days');
+  if (countdownRow && daysEl) {
+    if (wDate) {
+      const daysLeft = Math.ceil((new Date(wDate) - new Date()) / 86400000);
+      daysEl.textContent = daysLeft > 0 ? daysLeft : '🎉 已到';
+      countdownRow.style.display = 'block';
+    } else {
+      countdownRow.style.display = 'none';
+    }
+  }
 };
 
 // ── BUDGET CARD ───────────────────────────────────────────────────────────
