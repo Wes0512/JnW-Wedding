@@ -686,6 +686,8 @@ body {
         <button class="seg-btn active" data-liquid="T+0">T+0</button>
         <button class="seg-btn"        data-liquid="T+1">T+1</button>
         <button class="seg-btn"        data-liquid="T+2">T+2</button>
+        <button class="seg-btn"        data-liquid="T+3">T+3</button>
+        <button class="seg-btn"        data-liquid="T+5">T+5</button>
         <button class="seg-btn"        data-liquid="locked">锁定</button>
       </div>
     </div>
@@ -3991,7 +3993,7 @@ const setPlatField = (field, val) => {
 };
 
 const _syncModalSegs = () => {
-  const liqVals  = ['T+0', 'T+1', 'T+2', 'locked'];
+  const liqVals  = ['T+0', 'T+1', 'T+2', 'T+3', 'T+5', 'locked'];
   const roleVals = ['primary', 'backup', 'promo'];
 
   document.getElementById('pm-liquid-ctrl')?.querySelectorAll('.seg-btn').forEach((b, i) => {
