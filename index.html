@@ -681,6 +681,7 @@ body {
     <div class="inp-group"><div class="inp-label">平台名称</div><input class="inp sm" type="text" id="pm-name" placeholder="例：Versa、GX Bank FD"></div>
     <div class="inp-group"><div class="inp-label">简称（3–4 字）</div><input class="inp sm" type="text" id="pm-short" placeholder="例：VER" maxlength="4" style="text-transform:uppercase"></div>
     <div class="inp-group"><div class="inp-label">当前 EAR (%)</div><input class="inp sm" type="number" id="pm-ear" placeholder="3.5" step="0.1" inputmode="decimal"></div>
+    <div class="inp-group"><div class="inp-label">高息存款上限 (RM) — 选填</div><input class="inp sm" type="number" id="pm-cap" placeholder="例：Versa 30000，无上限留空" inputmode="decimal"></div>
     <div class="inp-group"><div class="inp-label">流动性</div>
       <div class="seg-ctrl" id="pm-liquid-ctrl">
         <button class="seg-btn active" data-liquid="T+0">T+0</button>
@@ -3961,7 +3962,7 @@ const openPlatModal = (editId) => {
     document.getElementById('pm-name').value  = p.name;
     document.getElementById('pm-short').value = p.short || '';
     document.getElementById('pm-ear').value   = getPlatEAR(p);
-    if (p.cap) document.getElementById('pm-cap').value = p.cap;
+    if (p.cap) { const capEl = document.getElementById('pm-cap'); if (capEl) capEl.value = p.cap; }
     document.getElementById('pm-editing-id').value = editId;
     document.getElementById('delete-plat-btn').style.display = 'block';
     document.getElementById('plat-modal-title').textContent = '编辑平台';
