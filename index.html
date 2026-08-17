@@ -2004,6 +2004,15 @@ const _renderSavingsHistory = () => {
   const topup = state.settings.topup || 2000;
   const now   = new Date();
 
+  // 找某平台在指定日期（含）之前，最新一笔记录的余额 —— 
+  // 就算当月没记录，也会往前抓最近已知的余额，不会让漏记的平台凭空归零
+  const balAsOf = (pid, dateStr) => {
+    const rel = state.entries
+      .filter(e => e.pid === pid && e.date <= dateStr)
+      .sort((a,b) => a.date.localeCompare(b.date));
+    return rel.length ? rel[rel.length-1].bal : 0;
+  };
+
   const months = [];
   for (let m = 5; m >= 0; m--) {
     const d   = new Date(now.getFullYear(), now.getMonth() - m, 1);
@@ -2013,18 +2022,16 @@ const _renderSavingsHistory = () => {
     const mEntries = state.entries.filter(e => e.date.startsWith(mk));
     if (!mEntries.length && m > 0) continue;
 
-    const pids     = [...new Set(state.entries.map(e => e.pid))];
-    const endBal   = pids.reduce((s, pid) => {
-      const pe = mEntries.filter(e => e.pid === pid).sort((a,b) => a.date.localeCompare(b.date));
-      return s + (pe.length ? pe[pe.length-1].bal : 0);
-    }, 0);
-    const prevD    = new Date(d.getFullYear(), d.getMonth()-1, 1);
-    const prevMk   = `${prevD.getFullYear()}-${String(prevD.getMonth()+1).padStart(2,'0')}`;
-    const prevEntries = state.entries.filter(e => e.date.startsWith(prevMk));
-    const startBal = pids.reduce((s, pid) => {
-      const pe = prevEntries.filter(e => e.pid === pid).sort((a,b) => a.date.localeCompare(b.date));
-      return s + (pe.length ? pe[pe.length-1].bal : 0);
-    }, 0);
+    // 本月月底（若是当前月，用今天）
+    const monthEndD = m === 0 ? now : new Date(d.getFullYear(), d.getMonth()+1, 0);
+    const monthEndStr = monthEndD.toISOString().slice(0,10);
+    // 上月月底
+    const prevMonthEndD = new Date(d.getFullYear(), d.getMonth(), 0);
+    const prevMonthEndStr = prevMonthEndD.toISOString().slice(0,10);
+
+    const pids   = [...new Set(state.entries.map(e => e.pid))];
+    const endBal = pids.reduce((s, pid) => s + balAsOf(pid, monthEndStr), 0);
+    const startBal = pids.reduce((s, pid) => s + balAsOf(pid, prevMonthEndStr), 0);
 
     const saved  = Math.max(0, endBal - startBal);
     const pct    = topup > 0 ? Math.min(100, saved / topup * 100) : 0;
