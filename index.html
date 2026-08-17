@@ -922,6 +922,9 @@ const state = {
   rebalances: [],
 };
 
+// Debug helper: expose state to window so it can be inspected in DevTools Console
+window._debugState = state;
+
 // Active Firestore unsubscribe functions
 let _unsubs = [];
 
@@ -2004,6 +2007,9 @@ const _renderSavingsHistory = () => {
   const topup = state.settings.topup || 2000;
   const now   = new Date();
 
+  // 手动格式化本地日期为 YYYY-MM-DD，避免 toISOString() 的UTC时区偏移问题
+  const fmtLocalDate = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+
   // 找某平台在指定日期（含）之前，最新一笔记录的余额 —— 
   // 就算当月没记录，也会往前抓最近已知的余额，不会让漏记的平台凭空归零
   const balAsOf = (pid, dateStr) => {
@@ -2024,10 +2030,10 @@ const _renderSavingsHistory = () => {
 
     // 本月月底（若是当前月，用今天）
     const monthEndD = m === 0 ? now : new Date(d.getFullYear(), d.getMonth()+1, 0);
-    const monthEndStr = monthEndD.toISOString().slice(0,10);
+    const monthEndStr = fmtLocalDate(monthEndD);
     // 上月月底
     const prevMonthEndD = new Date(d.getFullYear(), d.getMonth(), 0);
-    const prevMonthEndStr = prevMonthEndD.toISOString().slice(0,10);
+    const prevMonthEndStr = fmtLocalDate(prevMonthEndD);
 
     const pids   = [...new Set(state.entries.map(e => e.pid))];
     const endBal = pids.reduce((s, pid) => s + balAsOf(pid, monthEndStr), 0);
