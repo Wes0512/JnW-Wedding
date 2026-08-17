@@ -2007,18 +2007,6 @@ const _renderSavingsHistory = () => {
   const topup = state.settings.topup || 2000;
   const now   = new Date();
 
-  // 手动格式化本地日期为 YYYY-MM-DD，避免 toISOString() 的UTC时区偏移问题
-  const fmtLocalDate = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-
-  // 找某平台在指定日期（含）之前，最新一笔记录的余额 —— 
-  // 就算当月没记录，也会往前抓最近已知的余额，不会让漏记的平台凭空归零
-  const balAsOf = (pid, dateStr) => {
-    const rel = state.entries
-      .filter(e => e.pid === pid && e.date <= dateStr)
-      .sort((a,b) => a.date.localeCompare(b.date));
-    return rel.length ? rel[rel.length-1].bal : 0;
-  };
-
   const months = [];
   for (let m = 5; m >= 0; m--) {
     const d   = new Date(now.getFullYear(), now.getMonth() - m, 1);
@@ -2028,23 +2016,17 @@ const _renderSavingsHistory = () => {
     const mEntries = state.entries.filter(e => e.date.startsWith(mk));
     if (!mEntries.length && m > 0) continue;
 
-    // 本月月底（若是当前月，用今天）
-    const monthEndD = m === 0 ? now : new Date(d.getFullYear(), d.getMonth()+1, 0);
-    const monthEndStr = fmtLocalDate(monthEndD);
-    // 上月月底
-    const prevMonthEndD = new Date(d.getFullYear(), d.getMonth(), 0);
-    const prevMonthEndStr = fmtLocalDate(prevMonthEndD);
+    // 本月储蓄 = 这个月所有「入金」动作加总（不看出金，也不看净值变化）
+    // 出金是花钱/开销，不代表你没有存到钱，所以不该抵销入金金额
+    const saved = mEntries
+      .filter(e => e.flowDir === 'in' && (e.flow || 0) > 0)
+      .reduce((s, e) => s + (e.flow || 0), 0);
 
-    const pids   = [...new Set(state.entries.map(e => e.pid))];
-    const endBal = pids.reduce((s, pid) => s + balAsOf(pid, monthEndStr), 0);
-    const startBal = pids.reduce((s, pid) => s + balAsOf(pid, prevMonthEndStr), 0);
-
-    const saved  = Math.max(0, endBal - startBal);
     const pct    = topup > 0 ? Math.min(100, saved / topup * 100) : 0;
     const met    = saved >= topup * 0.9;
     const mint   = monthlyInterest(mk);
 
-    months.push({ mk, lbl, saved, pct, met, mint, endBal });
+    months.push({ mk, lbl, saved, pct, met, mint });
   }
 
   if (!months.length) {
